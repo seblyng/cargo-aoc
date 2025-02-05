@@ -11,7 +11,7 @@ pub struct AocRequest {
 
 impl AocRequest {
     const AOC_USER_AGENT: &'static str =
-        "github.com/seblj/cargo-aoc by sebastian@lyngjohansen.com and sivert-joh@hotmail.com";
+        "github.com/seblyng/cargo-aoc by sebastian@lyngjohansen.com and sivert-joh@hotmail.com";
 
     pub fn new() -> AocRequest {
         AocRequest {
