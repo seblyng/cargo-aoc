@@ -13,7 +13,7 @@
 Currently, this is only distributed on github. You can install it with
 
 ```
-cargo install --git https://github.com/seblj/cargo-aoc
+cargo install --git https://github.com/seblyng/cargo-aoc
 ```
 
 ## Crate/Project Requirements
