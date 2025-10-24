@@ -1,5 +1,7 @@
+use clap::Arg;
 use std::path::PathBuf;
 
+use chrono::Datelike;
 use clap::ArgMatches;
 use file::get_root_path;
 
@@ -147,24 +149,26 @@ pub async fn read_cache_answers(day: u32) -> Result<AocInfo, AocError> {
     })
 }
 
+pub fn get_day_argument() -> Arg {
+    let now = chrono::Utc::now();
+    let current_year = now.year();
+    let current_day = now.day();
 
-pub async fn get_day_argument() -> clap::Arg
-{
-    match get_day_from_path()
-    {
-        Ok(Some(day)) => {
-            clap::Arg::new("day")
+    if let Ok(Some(day)) = get_day_from_path() {
+        return Arg::new("day")
+            .short('d')
+            .default_value(day.to_string())
+            .help("Day to run");
+    }
+
+    if let Ok(year) = file::get_folder_year() {
+        if year == current_year && current_day <= 13 {
+            return Arg::new("day")
                 .short('d')
-                .default_value(day.to_string())
-                .required(false)
-                .help("Day to run")
-        }
-        _ => {
-            clap::Arg::new("day")
-                .short('d')
-                .required(true)
-                .help("Day to run")
+                .default_value(current_day.to_string())
+                .help("Day to run");
         }
     }
 
+    Arg::new("day").short('d').required(true).help("Day to run")
 }

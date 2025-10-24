@@ -70,6 +70,21 @@ pub fn get_root_path() -> Result<std::path::PathBuf, AocError> {
     }
 }
 
+pub fn get_folder_year() -> Result<i32, AocError> {
+    let current_year = chrono::Utc::now().year();
+    let valid = 2015..=current_year;
+
+    std::env::current_dir()?
+        .ancestors()
+        .find_map(|p| {
+            p.file_name()
+                .and_then(|s| s.to_str())
+                .and_then(|s| s.parse::<i32>().ok())
+                .and_then(|y| valid.contains(&y).then_some(y))
+        })
+        .ok_or(AocError::InvalidYear)
+}
+
 pub async fn day_path<P: AsRef<Path>>(root: P, day: u32) -> Result<std::path::PathBuf, AocError> {
     use std::{collections::VecDeque, io::*};
     let dir_name = format!("day_{:02}", day);

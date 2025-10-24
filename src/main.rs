@@ -55,7 +55,7 @@ async fn main() -> Result<(), AocError> {
             clap::command!("run")
                 .visible_alias("r")
                 .args([
-                    crate::util::get_day_argument().await,
+                    crate::util::get_day_argument(),
                     Arg::new("test")
                         .short('t')
                         .long("test")
