@@ -146,3 +146,25 @@ pub async fn read_cache_answers(day: u32) -> Result<AocInfo, AocError> {
         part2_answer: Some(lines[2].to_owned()),
     })
 }
+
+
+pub async fn get_day_argument() -> clap::Arg
+{
+    match get_day_from_path()
+    {
+        Ok(Some(day)) => {
+            clap::Arg::new("day")
+                .short('d')
+                .default_value(day.to_string())
+                .required(false)
+                .help("Day to run")
+        }
+        _ => {
+            clap::Arg::new("day")
+                .short('d')
+                .required(true)
+                .help("Day to run")
+        }
+    }
+
+}

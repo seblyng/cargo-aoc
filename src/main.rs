@@ -55,11 +55,7 @@ async fn main() -> Result<(), AocError> {
             clap::command!("run")
                 .visible_alias("r")
                 .args([
-                    Arg::new("day")
-                        .short('d')
-                        .required(chrono::Utc::now().day() > 25)
-                        .default_value(OsStr::from(chrono::Utc::now().day().to_string()))
-                        .help("Day to run"),
+                    crate::util::get_day_argument().await,
                     Arg::new("test")
                         .short('t')
                         .long("test")

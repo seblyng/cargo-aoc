@@ -21,7 +21,7 @@ pub fn get_day_from_path() -> Result<Option<u32>, AocError> {
                 num.push(ch);
             }
         }
-        let num = num.parse::<u32>().unwrap();
+        let num = num.parse::<u32>().ok()?;
 
         (1..=25).contains(&num).then_some(num)
     };
