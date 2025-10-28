@@ -156,10 +156,7 @@ pub fn get_day_argument() -> Arg {
     let current_day = now.day();
 
     if let Ok(Some(day)) = get_day_from_path() {
-        return Arg::new("day")
-            .short('d')
-            .default_value(day.to_string())
-            .help("Day to run");
+        return Arg::new("day").short('d').default_value(day.to_string());
     }
 
     if let Ok(year) = file::get_folder_year()
@@ -170,9 +167,8 @@ pub fn get_day_argument() -> Arg {
         // Not sure what the last day will be moving forward? Maybe 13?
         return Arg::new("day")
             .short('d')
-            .default_value(current_day.to_string())
-            .help("Day to run");
+            .default_value(current_day.to_string());
     }
 
-    Arg::new("day").short('d').required(true).help("Day to run")
+    Arg::new("day").short('d').required(true)
 }
