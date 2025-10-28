@@ -152,6 +152,7 @@ pub async fn read_cache_answers(day: u32) -> Result<AocInfo, AocError> {
 pub fn get_day_argument() -> Arg {
     let now = chrono::Utc::now();
     let current_year = now.year();
+    let current_month = now.month();
     let current_day = now.day();
 
     if let Ok(Some(day)) = get_day_from_path() {
@@ -161,13 +162,16 @@ pub fn get_day_argument() -> Arg {
             .help("Day to run");
     }
 
-    if let Ok(year) = file::get_folder_year() {
-        if year == current_year && current_day <= 13 {
-            return Arg::new("day")
-                .short('d')
-                .default_value(current_day.to_string())
-                .help("Day to run");
-        }
+    if let Ok(year) = file::get_folder_year()
+        && year == current_year
+        && current_month == 12
+        && current_day <= 13
+    {
+        // Not sure what the last day will be moving forward? Maybe 13?
+        return Arg::new("day")
+            .short('d')
+            .default_value(current_day.to_string())
+            .help("Day to run");
     }
 
     Arg::new("day").short('d').required(true).help("Day to run")
