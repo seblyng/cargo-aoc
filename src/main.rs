@@ -1,6 +1,6 @@
 use crate::util::get_day_argument;
 use chrono::Datelike;
-use clap::{builder::OsStr, Arg, Command};
+use clap::{Arg, Command, builder::OsStr};
 use error::AocError;
 mod assert;
 #[cfg(feature = "bench")]
