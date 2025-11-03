@@ -6,6 +6,7 @@ mod assert;
 #[cfg(feature = "bench")]
 mod bench;
 mod clippy;
+mod compiler;
 mod error;
 mod run;
 mod setup;

@@ -4,10 +4,14 @@ use std::{
 };
 
 use chrono::Datelike;
+use clap::ArgMatches;
 use reqwest::StatusCode;
 
 use super::request::AocRequest;
-use crate::error::AocError;
+use crate::{
+    compiler::{Common, RunningArgs},
+    error::AocError,
+};
 
 pub fn get_day_from_path() -> Result<Option<u32>, AocError> {
     let get_day = |s: &str| -> Option<u32> {
@@ -136,4 +140,80 @@ pub async fn download_input_file(day: u32, year: i32, dir: &Path) -> Result<(), 
     let bytes = res.bytes().await?;
     tokio::fs::write(dir.join("input"), bytes).await?;
     Ok(())
+}
+pub fn get_input_file(matches: &ArgMatches) -> &str {
+    if matches.get_flag("test") {
+        "test"
+    } else {
+        "input"
+    }
+}
+
+pub async fn get_running_args(matches: &ArgMatches) -> Result<RunningArgs, AocError> {
+    let day = super::get_day(matches)?;
+    let root = get_root_path()?;
+    let day_path = day_path(&root, day).await?;
+
+    let main = find_file(&day_path, "main").unwrap();
+
+    let input_file = get_input_file(matches);
+
+    let mut input = day_path.clone();
+    input.push(input_file);
+
+    let trailing_args = matches
+        .get_many::<String>("args")
+        .unwrap_or_default()
+        .cloned()
+        .collect::<Vec<_>>();
+
+    Ok(RunningArgs {
+        arguments: trailing_args,
+        common: Common {
+            file: main,
+            day_folder: day_path,
+            root_folder: root,
+            input_file: input,
+        },
+    })
+}
+
+pub fn find_file(start_dir: &Path, filename: &str) -> Option<PathBuf> {
+    let entries = match std::fs::read_dir(start_dir) {
+        Ok(entries) => entries,
+        Err(_) => return None,
+    };
+
+    let mut subdirs = Vec::new();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file()
+            && path
+                .file_name()
+                .is_some_and(|f| f.to_str().unwrap().starts_with(filename))
+        {
+            return Some(path);
+        } else if path.is_dir() {
+            subdirs.push(path);
+        }
+    }
+
+    subdirs.sort_by(|a, b| {
+        let count_a = std::fs::read_dir(a)
+            .map(|r| r.count())
+            .unwrap_or(usize::MAX);
+        let count_b = std::fs::read_dir(b)
+            .map(|r| r.count())
+            .unwrap_or(usize::MAX);
+        count_a.cmp(&count_b)
+    });
+
+    for subdir in subdirs {
+        if let Some(found) = find_file(&subdir, filename) {
+            return Some(found);
+        }
+    }
+
+    None
 }
