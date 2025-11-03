@@ -9,10 +9,12 @@ pub async fn test(matches: &ArgMatches) -> Result<(), AocError> {
     let day = get_day(matches)?;
     let day = format!("day_{:02}", day);
 
-    let reader = cmd!("cargo", "test", "--color", "always", "--", "--color", "always")
-        .dir(day)
-        .stderr_to_stdout()
-        .reader()?;
+    let reader = cmd!(
+        "cargo", "test", "--color", "always", "--", "--color", "always"
+    )
+    .dir(day)
+    .stderr_to_stdout()
+    .reader()?;
 
     let reader = BufReader::new(reader);
     let mut lines = reader.lines();

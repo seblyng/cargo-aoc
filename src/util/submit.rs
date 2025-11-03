@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use clap::ArgMatches;
 use sanitize_html::rules::predefined::DEFAULT;
 
-use super::{parse_get_answers, request::AocRequest, Task};
+use super::{Task, parse_get_answers, request::AocRequest};
 use crate::error::AocError;
 
 pub fn get_submit_task(matches: &ArgMatches) -> Option<Result<Task, AocError>> {

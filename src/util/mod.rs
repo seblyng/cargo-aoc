@@ -1,5 +1,7 @@
+use clap::Arg;
 use std::path::PathBuf;
 
+use chrono::Datelike;
 use clap::ArgMatches;
 use file::get_root_path;
 
@@ -52,11 +54,7 @@ pub fn get_day(matches: &ArgMatches) -> Result<u32, AocError> {
 
 pub fn get_time_symbol() -> String {
     let sym = std::env::var("TASKUNIT").unwrap_or("ms".to_owned());
-    if sym == "us" {
-        "μs".to_owned()
-    } else {
-        sym
-    }
+    if sym == "us" { "μs".to_owned() } else { sym }
 }
 
 #[derive(Debug)]
@@ -145,4 +143,28 @@ pub async fn read_cache_answers(day: u32) -> Result<AocInfo, AocError> {
         part1_answer: Some(lines[1].to_owned()),
         part2_answer: Some(lines[2].to_owned()),
     })
+}
+
+pub fn get_day_argument() -> Arg {
+    let now = chrono::Utc::now();
+    let current_year = now.year();
+    let current_month = now.month();
+    let current_day = now.day();
+
+    if let Ok(Some(day)) = get_day_from_path() {
+        return Arg::new("day").short('d').default_value(day.to_string());
+    }
+
+    if let Ok(year) = file::get_folder_year()
+        && year == current_year
+        && current_month == 12
+        && current_day <= 13
+    {
+        // Not sure what the last day will be moving forward? Maybe 13?
+        return Arg::new("day")
+            .short('d')
+            .default_value(current_day.to_string());
+    }
+
+    Arg::new("day").short('d').required(true)
 }

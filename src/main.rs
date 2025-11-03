@@ -1,5 +1,6 @@
+use crate::util::get_day_argument;
 use chrono::Datelike;
-use clap::{builder::OsStr, Arg, Command};
+use clap::{Arg, Command, builder::OsStr};
 use error::AocError;
 mod assert;
 #[cfg(feature = "bench")]
@@ -39,11 +40,7 @@ async fn main() -> Result<(), AocError> {
                 .disable_version_flag(true)
                 .about("Run cargo clippy on the specified day")
                 .args([
-                    Arg::new("day")
-                        .short('d')
-                        .required(false)
-                        .default_value(OsStr::from(chrono::Utc::now().day().to_string()))
-                        .help("Day to check"),
+                    get_day_argument().help("Day to check"),
                     Arg::new("fix")
                         .long("fix")
                         .required(false)
@@ -55,11 +52,7 @@ async fn main() -> Result<(), AocError> {
             clap::command!("run")
                 .visible_alias("r")
                 .args([
-                    Arg::new("day")
-                        .short('d')
-                        .required(chrono::Utc::now().day() > 25)
-                        .default_value(OsStr::from(chrono::Utc::now().day().to_string()))
-                        .help("Day to run"),
+                    get_day_argument().help("Day to run"),
                     Arg::new("test")
                         .short('t')
                         .long("test")
@@ -95,13 +88,7 @@ async fn main() -> Result<(), AocError> {
                 ])
                 .about("Runs the given day"),
         )
-        .subcommand(
-            clap::command!("test").args([Arg::new("day")
-                .short('d')
-                .required(false)
-                .default_value(OsStr::from(chrono::Utc::now().day().to_string()))
-                .help("Day to run tests for")]),
-        )
+        .subcommand(clap::command!("test").args([get_day_argument().help("Day to run tests for")]))
         .subcommand(
             Command::new("token")
                 .about("Get or set the session token used to communicate with the AOC servers")
@@ -144,10 +131,7 @@ async fn main() -> Result<(), AocError> {
             Command::new("bench")
                 .about("Run benchmarks for the specified day")
                 .args([
-                    Arg::new("day")
-                        .help("The day to benchmark")
-                        .short('d')
-                        .default_value(chrono::Utc::now().day().to_string()),
+                    get_day_argument().help("The day to benchmark"),
                     Arg::new("output")
                         .help("Output location")
                         .short('o')

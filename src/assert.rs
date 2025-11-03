@@ -1,6 +1,6 @@
 use crate::{
     error::AocError,
-    util::{get_day_title_and_answers, parse_get_answers, Task},
+    util::{Task, get_day_title_and_answers, parse_get_answers},
 };
 
 fn assert_print_equal(expected: &str, actual: &str, task: Task) {

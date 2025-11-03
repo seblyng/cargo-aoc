@@ -1,6 +1,6 @@
 use reqwest::{
-    header::{COOKIE, USER_AGENT},
     IntoUrl, Response,
+    header::{COOKIE, USER_AGENT},
 };
 
 use crate::error::AocError;
