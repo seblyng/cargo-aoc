@@ -5,10 +5,13 @@ use std::{
 };
 
 use chrono::Datelike;
+use clap::ArgMatches;
 use reqwest::StatusCode;
 
 use super::request::AocRequest;
 use crate::{error::AocError, task_config::Config};
+
+use crate::compiler::{Common, RunningArgs};
 
 static PARSE_FILE: &str = ".parse.toml";
 
@@ -163,6 +166,43 @@ pub fn get_parse_config(root: &Path, day: &Path) -> Config {
 
     f().and_then(|path| Config::new(&path).ok())
         .unwrap_or_default()
+}
+
+pub fn get_input_file(matches: &ArgMatches) -> &str {
+    if matches.get_flag("test") {
+        "test"
+    } else {
+        "input"
+    }
+}
+
+pub async fn get_running_args(matches: &ArgMatches) -> Result<RunningArgs, AocError> {
+    let day = super::get_day(matches)?;
+    let root = get_root_path()?;
+    let day_path = day_path(&root, day).await?;
+
+    let main = find_file(&day_path, "main").unwrap();
+
+    let input_file = get_input_file(matches);
+
+    let mut input = day_path.clone();
+    input.push(input_file);
+
+    let trailing_args = matches
+        .get_many::<String>("args")
+        .unwrap_or_default()
+        .cloned()
+        .collect::<Vec<_>>();
+
+    Ok(RunningArgs {
+        arguments: trailing_args,
+        common: Common {
+            file: main,
+            day_folder: day_path,
+            root_folder: root,
+            input_file: input,
+        },
+    })
 }
 
 pub fn find_file(start_dir: &Path, filename: &str) -> Option<PathBuf> {
