@@ -65,13 +65,6 @@ async fn main() -> Result<(), AocError> {
                         .required(false)
                         .action(clap::ArgAction::SetTrue)
                         .help("Asserts that the answers are still correct after submitting"),
-                    Arg::new("compiler-flags")
-                        .short('C')
-                        .long("compiler-flags")
-                        .required(false)
-                        .default_value(std::env::var("RUSTFLAGS").unwrap_or_default())
-                        .allow_hyphen_values(true)
-                        .help("Flags to send to rustc"),
                     #[cfg(feature = "submit")]
                     Arg::new("submit")
                         .short('S')
@@ -79,12 +72,11 @@ async fn main() -> Result<(), AocError> {
                         .required(false)
                         .help("Submit answer")
                         .conflicts_with("test"),
-                    Arg::new("release")
-                        .short('r')
-                        .long("release")
-                        .required(false)
-                        .action(clap::ArgAction::SetTrue)
-                        .help("Run it release mode"),
+                    Arg::new("args")
+                        .num_args(1..)
+                        .trailing_var_arg(true)
+                        .allow_hyphen_values(true)
+                        .help("Arguments after -- will passed to cargo"),
                 ])
                 .about("Runs the given day"),
         )
