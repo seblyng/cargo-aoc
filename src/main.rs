@@ -74,6 +74,7 @@ async fn main() -> Result<(), AocError> {
                         .conflicts_with("test"),
                     Arg::new("Args")
                         .trailing_var_arg(true)
+                        .num_args(1..)
                         .help("Arguments to send to compiler"),
                 ])
                 .about("Runs the given day"),
