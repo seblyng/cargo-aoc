@@ -53,14 +53,17 @@ pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
     let input = get_input_file(matches);
 
     let trailing_args = matches
-        .get_one::<String>("Args")
-        .cloned()
-        .unwrap_or_default();
-    let cmd = if !trailing_args.is_empty() {
-        cmd!("cargo", "run", trailing_args, "--color", "always", input)
-    } else {
-        cmd!("cargo", "run", "--color", "always", input)
-    };
+        .get_many::<&str>("args")
+        .unwrap_or_default()
+        .copied()
+        .collect::<Vec<_>>();
+
+    let args = std::iter::once("run")
+        .chain(trailing_args)
+        .chain(["--color", "always"])
+        .chain(std::iter::once(input));
+
+    let cmd = cmd("cargo", args);
     let reader = cmd.dir(dir).stderr_to_stdout().reader()?;
 
     let reader = BufReader::new(reader);

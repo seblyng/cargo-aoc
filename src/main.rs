@@ -72,10 +72,11 @@ async fn main() -> Result<(), AocError> {
                         .required(false)
                         .help("Submit answer")
                         .conflicts_with("test"),
-                    Arg::new("Args")
-                        .trailing_var_arg(true)
+                    Arg::new("args")
                         .num_args(1..)
-                        .help("Arguments to send to compiler"),
+                        .trailing_var_arg(true)
+                        .allow_hyphen_values(true)
+                        .help("Arguments after -- will passed to cargo"),
                 ])
                 .about("Runs the given day"),
         )
