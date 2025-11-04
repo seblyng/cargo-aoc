@@ -43,7 +43,6 @@ pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
     }
 
     let args = get_running_args(matches).await?;
-    dbg!(&args);
     let compiler = REGISTER
         .by_extension(args.common.file.extension().unwrap().to_str().unwrap())
         .unwrap();
