@@ -5,6 +5,7 @@ pub trait Language {
     fn execute(&self, args: RunningArgs) -> duct::Expression;
 }
 
+#[allow(dead_code)]
 #[derive(Default, Debug)]
 pub struct Common {
     pub file: PathBuf,
@@ -13,6 +14,7 @@ pub struct Common {
     pub input_file: PathBuf,
 }
 
+#[allow(dead_code)]
 #[derive(Default, Debug)]
 pub struct RunningArgs {
     pub arguments: Vec<String>,
