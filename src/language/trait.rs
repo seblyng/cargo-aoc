@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-pub trait Compiler {
+pub trait Language {
     fn extension(&self) -> &'static str;
     fn execute(&self, args: RunningArgs) -> duct::Expression;
 }

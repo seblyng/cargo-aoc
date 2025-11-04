@@ -9,8 +9,8 @@ use reqwest::StatusCode;
 
 use super::request::AocRequest;
 use crate::{
-    compiler::{Common, RunningArgs},
     error::AocError,
+    language::{Common, RunningArgs},
 };
 
 pub fn get_day_from_path() -> Result<Option<u32>, AocError> {
