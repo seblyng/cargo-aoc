@@ -193,8 +193,11 @@ pub async fn get_running_args(matches: &ArgMatches) -> Result<RunningArgs, AocEr
         .cloned()
         .collect::<Vec<_>>();
 
+    let release = matches.get_flag("release");
+
     Ok(RunningArgs {
         arguments: trailing_args,
+        release,
         common: Common {
             file: main,
             day_folder: day_path,

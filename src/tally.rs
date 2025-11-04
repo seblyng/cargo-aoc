@@ -6,6 +6,7 @@ use tokio::runtime::Runtime;
 
 use crate::{
     error::AocError,
+    language::{Common, REGISTER, RunningArgs},
     util::{file::*, get_day_title_and_answers, get_time_symbol},
 };
 
@@ -165,11 +166,11 @@ fn build_day(
 
 async fn verify_day(
     day: usize,
-    path: PathBuf,
+    root_folder: PathBuf,
     year: usize,
     progress: &ProgressBar,
 ) -> Result<BuildRes, Error> {
-    let day_path = day_path(path.clone(), day as u32)
+    let day_path = day_path(root_folder.clone(), day as u32)
         .await
         .unwrap_or_else(|_| panic!("day {day} is build, but could not find the path"));
 
@@ -189,12 +190,30 @@ async fn verify_day(
             })?;
     }
 
-    let target = get_target(path.clone(), day);
+    let target = get_target(root_folder.clone(), day);
     let progress = progress.clone();
+    let main = find_file(&day_path, "main").expect("There should be a file here");
 
-    let res = Command::new(target)
-        .current_dir(&day_path)
-        .output()
+    let running_args = RunningArgs {
+        release: true,
+        arguments: Vec::new(),
+        common: Common {
+            day_folder: day_path.clone(),
+            root_folder: root_folder.clone(),
+            file: main.clone(),
+            input_file: input,
+        },
+    };
+
+    let runner = REGISTER
+        .by_extension(main.extension().unwrap().to_str().unwrap())
+        .unwrap();
+
+    let res = runner
+        .execute(running_args)
+        .stdout_capture()
+        .stderr_capture()
+        .run()
         .ok()
         .unwrap();
 
@@ -216,7 +235,7 @@ async fn verify_day(
     }
 
     let text = std::str::from_utf8(&res.stdout).unwrap();
-    let config = get_parse_config(&path, &day_path);
+    let config = get_parse_config(&root_folder, &day_path);
     let (_t1, _t2) = config.get_answers(&text);
     if _t1.is_none() && _t2.is_none() {
         return Err(Error {
@@ -242,16 +261,16 @@ async fn verify_day(
 
 async fn compile_and_verify_days(
     days: Vec<usize>,
-    cargo_folder: PathBuf,
+    root_folder: PathBuf,
     year: usize,
 ) -> Result<Vec<Result<BuildRes, Error>>, AocError> {
-    let possible_days = filter_days_based_on_folder(&days, &cargo_folder)?;
+    let possible_days = filter_days_based_on_folder(&days, &root_folder)?;
 
     let progress = get_progressbar(possible_days.len() as u64);
     progress.set_message("compiling");
 
     let res: Vec<_> = thread_exec(&days, |day| {
-        build_day(*day, cargo_folder.clone(), &progress, year)
+        build_day(*day, root_folder.clone(), &progress, year)
     });
 
     progress.reset();
@@ -260,7 +279,7 @@ async fn compile_and_verify_days(
     let days: Vec<_> = thread_exec(res, |day| {
         day.and_then(|day| {
             let runtime = Runtime::new().unwrap();
-            runtime.block_on(verify_day(day, cargo_folder.clone(), year, &progress))
+            runtime.block_on(verify_day(day, root_folder.clone(), year, &progress))
         })
     });
 

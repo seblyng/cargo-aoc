@@ -6,8 +6,8 @@ mod assert;
 #[cfg(feature = "bench")]
 mod bench;
 mod clippy;
-mod language;
 mod error;
+mod language;
 mod run;
 mod setup;
 #[cfg(feature = "tally")]
@@ -74,6 +74,12 @@ async fn main() -> Result<(), AocError> {
                         .required(false)
                         .help("Submit answer")
                         .conflicts_with("test"),
+                    Arg::new("release")
+                        .short('r')
+                        .long("release")
+                        .required(false)
+                        .action(clap::ArgAction::SetTrue)
+                        .help("Set the release flag"),
                     Arg::new("args")
                         .num_args(1..)
                         .trailing_var_arg(true)

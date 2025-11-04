@@ -18,5 +18,6 @@ pub struct Common {
 #[derive(Default, Debug)]
 pub struct RunningArgs {
     pub arguments: Vec<String>,
+    pub release: bool,
     pub common: Common,
 }
