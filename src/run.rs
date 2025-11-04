@@ -51,20 +51,17 @@ pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
     }
 
     let input = get_input_file(matches);
-    let flags = matches
-        .get_one::<String>("compiler-flags")
-        .ok_or(AocError::ArgMatches)?;
 
-    let cmd = if matches.get_flag("release") {
-        cmd!("cargo", "run", "--release", "--color", "always", input)
+    let trailing_args = matches
+        .get_one::<String>("Args")
+        .cloned()
+        .unwrap_or_default();
+    let cmd = if !trailing_args.is_empty() {
+        cmd!("cargo", "run", trailing_args, "--color", "always", input)
     } else {
         cmd!("cargo", "run", "--color", "always", input)
     };
-    let reader = cmd
-        .dir(dir)
-        .env("RUSTFLAGS", flags)
-        .stderr_to_stdout()
-        .reader()?;
+    let reader = cmd.dir(dir).stderr_to_stdout().reader()?;
 
     let reader = BufReader::new(reader);
     let mut lines = reader.lines();
