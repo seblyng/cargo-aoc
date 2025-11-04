@@ -11,9 +11,8 @@ use reqwest::StatusCode;
 use super::request::AocRequest;
 use crate::{error::AocError, task_config::Config};
 
-use crate::compiler::{Common, RunningArgs};
-
 static PARSE_FILE: &str = ".parse.toml";
+use crate::language::{Common, RunningArgs};
 
 pub fn get_day_from_path() -> Result<Option<u32>, AocError> {
     let get_day = |s: &str| -> Option<u32> {

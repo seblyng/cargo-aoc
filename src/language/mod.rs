@@ -3,6 +3,6 @@ use impls::*;
 
 mod r#trait;
 
-pub use r#trait::{Common, Compiler, RunningArgs};
+pub use r#trait::{Common, Language, RunningArgs};
 mod register;
 pub use register::{REGISTER, Register};

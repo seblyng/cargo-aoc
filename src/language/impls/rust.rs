@@ -1,8 +1,8 @@
-use crate::compiler::{Compiler, RunningArgs};
+use crate::language::{Language, RunningArgs};
 use duct::cmd;
 pub struct Rust;
 
-impl Compiler for Rust {
+impl Language for Rust {
     fn extension(&self) -> &'static str {
         "rs"
     }

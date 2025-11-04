@@ -7,8 +7,8 @@ use clap::ArgMatches;
 use crate::util::submit::{self, get_submit_task};
 use crate::{
     assert::assert_answer,
-    compiler::REGISTER,
     error::AocError,
+    language::REGISTER,
     util::{
         file::{day_path, download_input_file, get_parse_config, get_root_path, get_running_args},
         get_day,
