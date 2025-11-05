@@ -10,8 +10,8 @@ use crate::{
     assert::assert_answer,
     error::AocError,
     util::{
-        file::{day_path, download_input_file, get_root_path},
-        get_day, get_time_symbol,
+        file::{day_path, download_input_file, get_parse_file, get_root_path},
+        get_day,
     },
 };
 
@@ -34,7 +34,7 @@ pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
         .parse::<i32>()
         .unwrap();
 
-    let dir = day_path(path, day).await?;
+    let dir = day_path(&path, day).await?;
 
     if !dir.join("input").exists() {
         let current_year = Utc::now().year();
@@ -64,29 +64,28 @@ pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
         .chain(std::iter::once(input));
 
     let cmd = cmd("cargo", args);
-    let reader = cmd.dir(dir).stderr_to_stdout().reader()?;
+    let reader = cmd.dir(&dir).stdout_capture().stderr_null().reader()?;
 
     let reader = BufReader::new(reader);
     let mut lines = reader.lines();
 
     let mut out = String::new();
-    let unit = get_time_symbol();
     while let Some(Ok(line)) = lines.next() {
         println!("{}", line);
-        if line.contains(&format!("{unit})\tTask")) {
-            out.push_str(&line);
-            out.push('\n');
-        }
+        out.push_str(&line);
+        out.push('\n');
     }
 
     if matches.get_flag("assert") {
-        assert_answer(&out, day, year).await?;
+        let parse_file = get_parse_file(&path, &dir);
+        assert_answer(&out, day, year, parse_file).await?;
     }
 
     // Only try to submit if the submit flag is passed
     #[cfg(feature = "submit")]
     if let Some(task) = get_submit_task(matches).transpose()? {
-        let output = submit::submit(&out, task, day, year).await?;
+        let parse_file = get_parse_file(&path, &dir);
+        let output = submit::submit(&out, task, day, year, parse_file).await?;
         println!("Task {}: {}", task, output);
     }
     Ok(())

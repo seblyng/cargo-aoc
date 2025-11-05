@@ -1,9 +1,11 @@
 use std::{
+    env::home_dir,
     ffi::OsStr,
     path::{Path, PathBuf},
 };
 
 use chrono::Datelike;
+use regex::Regex;
 use reqwest::StatusCode;
 
 use super::request::AocRequest;
@@ -134,4 +136,91 @@ pub async fn download_input_file(day: u32, year: i32, dir: &Path) -> Result<(), 
     let bytes = res.bytes().await?;
     tokio::fs::write(dir.join("input"), bytes).await?;
     Ok(())
+}
+
+pub struct ParseFile {
+    pub task_one: Regex,
+    pub task_two: Regex,
+}
+
+impl Default for ParseFile {
+    fn default() -> Self {
+        ParseFile {
+            task_one: Regex::new(r"^(.*)$").unwrap(),
+            task_two: Regex::new(r"^(.*)$").unwrap(),
+        }
+    }
+}
+
+pub fn get_parse_file(root: &Path, day: &Path) -> ParseFile {
+    let f = || {
+        if let Some(file) = find_file(day, ".parse") {
+            return Some(file);
+        }
+
+        let root = root.join(".parse");
+        if root.exists() {
+            return Some(root);
+        }
+
+        let config = home_dir()?.join(".config").join("cargo-aoc").join(".parse");
+        if config.exists() {
+            return Some(config);
+        }
+
+        None
+    };
+
+    f().map(|it| {
+        let content = std::fs::read_to_string(it).unwrap();
+        let mut iter = content.lines();
+        let line1 = iter.next().expect("No first line in .parse file found");
+        let line2 = iter.next().expect("No second line in .parse file found");
+
+        ParseFile {
+            task_one: Regex::new(line1).expect("Invalid regex in first line of .parse file"),
+            task_two: Regex::new(line2).expect("Invalid regex in second line of .parse file"),
+        }
+    })
+    .unwrap_or_default()
+}
+
+pub fn find_file(start_dir: &Path, filename: &str) -> Option<PathBuf> {
+    let entries = match std::fs::read_dir(start_dir) {
+        Ok(entries) => entries,
+        Err(_) => return None,
+    };
+
+    let mut subdirs = Vec::new();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file()
+            && path
+                .file_name()
+                .is_some_and(|f| f.to_str().unwrap().starts_with(filename))
+        {
+            return Some(path);
+        } else if path.is_dir() {
+            subdirs.push(path);
+        }
+    }
+
+    subdirs.sort_by(|a, b| {
+        let count_a = std::fs::read_dir(a)
+            .map(|r| r.count())
+            .unwrap_or(usize::MAX);
+        let count_b = std::fs::read_dir(b)
+            .map(|r| r.count())
+            .unwrap_or(usize::MAX);
+        count_a.cmp(&count_b)
+    });
+
+    for subdir in subdirs {
+        if let Some(found) = find_file(&subdir, filename) {
+            return Some(found);
+        }
+    }
+
+    None
 }

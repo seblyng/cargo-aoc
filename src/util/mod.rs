@@ -1,4 +1,5 @@
 use clap::Arg;
+use regex::Regex;
 use std::path::PathBuf;
 
 use chrono::Datelike;
@@ -9,7 +10,7 @@ use self::{
     file::{day_path, get_day_from_path},
     request::AocRequest,
 };
-use crate::error::AocError;
+use crate::{error::AocError, util::file::ParseFile};
 
 pub mod file;
 pub mod request;
@@ -106,17 +107,19 @@ pub async fn get_day_title_and_answers(day: u32, year: u32) -> Result<AocInfo, A
     Ok(info)
 }
 
-pub fn parse_get_answers(output: &str) -> (Option<String>, Option<String>) {
+pub fn parse_get_answers(output: &str, parse_file: ParseFile) -> (Option<String>, Option<String>) {
     let strip = strip_ansi_escapes::strip(output);
     let text = std::str::from_utf8(&strip).unwrap();
 
-    let parse = |line: &str| {
-        line.split_ascii_whitespace()
-            .next_back()
-            .map(|s| s.to_string())
+    let parse = |line: &str, regex: &Regex| {
+        regex.captures(line).iter().next().map(|cap| cap[1].to_string())
     };
+
     let mut iter = text.split('\n');
-    (iter.next().and_then(parse), iter.next().and_then(parse))
+    (
+        iter.next().and_then(|it| parse(it, &parse_file.task_one)),
+        iter.next().and_then(|it| parse(it, &parse_file.task_two))
+    )
 }
 
 async fn get_cache_path(day: u32) -> Result<PathBuf, AocError> {

@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use clap::ArgMatches;
 use sanitize_html::rules::predefined::DEFAULT;
 
-use super::{Task, parse_get_answers, request::AocRequest};
-use crate::error::AocError;
+use super::{parse_get_answers, request::AocRequest, Task};
+use crate::{error::AocError, util::file::ParseFile};
 
 pub fn get_submit_task(matches: &ArgMatches) -> Option<Result<Task, AocError>> {
     let task = matches.get_one::<String>("submit")?.parse::<u8>();
@@ -25,8 +25,14 @@ fn parse_and_sanitize_output(output: &str) -> Option<String> {
     sanitize_html::sanitize_str(&DEFAULT, body).ok()
 }
 
-pub async fn submit(output: &str, task: Task, day: u32, year: i32) -> Result<String, AocError> {
-    let (p1, p2) = parse_get_answers(output);
+pub async fn submit(
+    output: &str,
+    task: Task,
+    day: u32,
+    year: i32,
+    parse_file: ParseFile,
+) -> Result<String, AocError> {
+    let (p1, p2) = parse_get_answers(output, parse_file);
     let answer = if task == Task::One { p1 } else { p2 }.ok_or(AocError::ParseStdout)?;
     let url = format!("https://adventofcode.com/{}/day/{}/answer", year, day);
 
