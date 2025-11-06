@@ -6,7 +6,7 @@ use tokio::runtime::Runtime;
 
 use crate::{
     error::AocError,
-    util::{file::*, get_day_title_and_answers, get_time_symbol},
+    util::{file::*, get_day_title_and_answers, get_time_symbol, parse_get_answers},
 };
 
 use crate::util::tally_util::*;
@@ -215,7 +215,8 @@ async fn verify_day(
         });
     }
 
-    let (_t1, _t2) = parse_get_answers(res);
+    let text = std::str::from_utf8(&res.stdout).unwrap();
+    let (_t1, _t2) = parse_get_answers(text);
     if _t1.is_none() && _t2.is_none() {
         return Err(Error {
             title: info.title.clone(),

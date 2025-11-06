@@ -46,16 +46,18 @@ pub enum ErrorTypes {
     InputDownloadError,
     NotImplementd,
 }
-impl ToString for ErrorTypes {
-    fn to_string(&self) -> String {
+
+impl std::fmt::Display for ErrorTypes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ErrorTypes::CompilerError(s) => s.to_owned(),
-            ErrorTypes::RuntimeError(s) => s.to_owned(),
-            ErrorTypes::NotImplementd => String::from("UNIMPL"),
-            ErrorTypes::InputDownloadError => String::from("INPUT DOWNLOAD ERROR"),
+            ErrorTypes::CompilerError(s) => write!(f, "{}", s),
+            ErrorTypes::RuntimeError(s) => write!(f, "{}", s),
+            ErrorTypes::NotImplementd => write!(f, "UNIMPL"),
+            ErrorTypes::InputDownloadError => write!(f, "INPUT DOWNLOAD ERROR"),
         }
     }
 }
+
 #[derive(Debug)]
 pub struct Error {
     pub day: usize,
@@ -130,20 +132,6 @@ pub fn parse_get_times(output: Output) -> Result<(usize, Option<usize>), AocErro
     let p2 = iter.next().and_then(|n| parse(n).ok());
 
     Ok((p1, p2))
-}
-
-pub fn parse_get_answers(output: Output) -> (Option<String>, Option<String>) {
-    let text = std::str::from_utf8(&output.stdout).unwrap();
-    let strip = strip_ansi_escapes::strip(text);
-    let text = std::str::from_utf8(&strip).unwrap();
-
-    let parse = |line: &str| {
-        line.split_ascii_whitespace()
-            .next_back()
-            .map(|s| s.to_string())
-    };
-    let mut iter = text.split('\n');
-    (iter.next().and_then(parse), iter.next().and_then(parse))
 }
 
 pub fn get_target(path_buf: PathBuf, day: usize) -> PathBuf {

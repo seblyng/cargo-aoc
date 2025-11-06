@@ -35,7 +35,7 @@ pub fn get_day_from_path() -> Result<Option<u32>, AocError> {
             .to_str()
             .ok_or(AocError::InvalidRunDay)?;
 
-        if let Some(day) = get_day(&name) {
+        if let Some(day) = get_day(name) {
             return Ok(Some(day));
         }
         if !cwd.pop() {
@@ -48,9 +48,7 @@ pub fn get_root_path() -> Result<std::path::PathBuf, AocError> {
     let mut cwd = std::env::current_dir()?;
 
     loop {
-        let name = cwd
-            .file_name()
-            .ok_or_else(|| std::io::Error::last_os_error())?;
+        let name = cwd.file_name().ok_or_else(std::io::Error::last_os_error)?;
 
         let Ok(year): Result<i32, _> = name.to_str().unwrap().parse() else {
             if !cwd.pop() {
