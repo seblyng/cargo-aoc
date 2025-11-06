@@ -112,13 +112,17 @@ pub fn parse_get_answers(output: &str, parse_file: ParseFile) -> (Option<String>
     let text = std::str::from_utf8(&strip).unwrap();
 
     let parse = |line: &str, regex: &Regex| {
-        regex.captures(line).iter().next().map(|cap| cap[1].to_string())
+        regex
+            .captures(line)
+            .iter()
+            .next()
+            .map(|cap| cap[1].to_string())
     };
 
-    let mut iter = text.split('\n');
+    let mut iter = text.split('\n').filter(|line| !line.is_empty());
     (
         iter.next().and_then(|it| parse(it, &parse_file.task_one)),
-        iter.next().and_then(|it| parse(it, &parse_file.task_two))
+        iter.next().and_then(|it| parse(it, &parse_file.task_two)),
     )
 }
 
@@ -170,4 +174,50 @@ pub fn get_day_argument() -> Arg {
     }
 
     Arg::new("day").short('d').required(true)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_output() {
+        let output = "12345\n67890";
+
+        let (a1, a2) = parse_get_answers(output, ParseFile::default());
+        assert_eq!(a1, Some("12345".to_owned()));
+        assert_eq!(a2, Some("67890".to_owned()));
+    }
+
+    #[test]
+    fn test_parse_output_trims_newlines() {
+        let output = r#"
+
+12345
+
+67890
+
+"#;
+
+        let (a1, a2) = parse_get_answers(output, ParseFile::default());
+        assert_eq!(a1, Some("12345".to_owned()));
+        assert_eq!(a2, Some("67890".to_owned()));
+    }
+
+    #[test]
+    fn test_parse_output_custom_regex() {
+        let output = r#"
+(3ms)   Task one: 12345
+(3ms)   Task two: 67890
+"#;
+
+        let parse_file = ParseFile {
+            task_one: Regex::new(r"Task one:\s*(\S+)").unwrap(),
+            task_two: Regex::new(r"Task two:\s*(\S+)").unwrap(),
+        };
+
+        let (a1, a2) = parse_get_answers(output, parse_file);
+        assert_eq!(a1, Some("12345".to_owned()));
+        assert_eq!(a2, Some("67890".to_owned()));
+    }
 }
