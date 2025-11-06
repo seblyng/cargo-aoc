@@ -134,20 +134,6 @@ pub fn parse_get_times(output: Output) -> Result<(usize, Option<usize>), AocErro
     Ok((p1, p2))
 }
 
-pub fn parse_get_answers(output: Output) -> (Option<String>, Option<String>) {
-    let text = std::str::from_utf8(&output.stdout).unwrap();
-    let strip = strip_ansi_escapes::strip(text);
-    let text = std::str::from_utf8(&strip).unwrap();
-
-    let parse = |line: &str| {
-        line.split_ascii_whitespace()
-            .next_back()
-            .map(|s| s.to_string())
-    };
-    let mut iter = text.split('\n');
-    (iter.next().and_then(parse), iter.next().and_then(parse))
-}
-
 pub fn get_target(path_buf: PathBuf, day: usize) -> PathBuf {
     let bin = format!("day_{:02}", day);
     let mut path_buf = path_buf;
