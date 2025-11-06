@@ -46,16 +46,18 @@ pub enum ErrorTypes {
     InputDownloadError,
     NotImplementd,
 }
-impl ToString for ErrorTypes {
-    fn to_string(&self) -> String {
+
+impl std::fmt::Display for ErrorTypes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ErrorTypes::CompilerError(s) => s.to_owned(),
-            ErrorTypes::RuntimeError(s) => s.to_owned(),
-            ErrorTypes::NotImplementd => String::from("UNIMPL"),
-            ErrorTypes::InputDownloadError => String::from("INPUT DOWNLOAD ERROR"),
+            ErrorTypes::CompilerError(s) => write!(f, "{}", s),
+            ErrorTypes::RuntimeError(s) => write!(f, "{}", s),
+            ErrorTypes::NotImplementd => write!(f, "UNIMPL"),
+            ErrorTypes::InputDownloadError => write!(f, "INPUT DOWNLOAD ERROR"),
         }
     }
 }
+
 #[derive(Debug)]
 pub struct Error {
     pub day: usize,

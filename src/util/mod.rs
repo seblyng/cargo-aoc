@@ -42,10 +42,10 @@ pub fn get_day(matches: &ArgMatches) -> Result<u32, AocError> {
         Err(AocError::InvalidRunDay)
     } else {
         let source = matches.value_source("day").unwrap();
-        if source == clap::parser::ValueSource::DefaultValue {
-            if let Ok(Some(day)) = get_day_from_path() {
-                return Ok(day);
-            }
+        if source == clap::parser::ValueSource::DefaultValue
+            && let Ok(Some(day)) = get_day_from_path()
+        {
+            return Ok(day);
         }
 
         Ok(day)
