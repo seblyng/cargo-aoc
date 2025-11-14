@@ -119,11 +119,21 @@ pub fn parse_get_answers(output: &str, parse_file: ParseFile) -> (Option<String>
             .map(|cap| cap[1].to_string())
     };
 
-    let mut iter = text.split('\n').filter(|line| !line.is_empty());
-    (
-        iter.next().and_then(|it| parse(it, &parse_file.task_one)),
-        iter.next().and_then(|it| parse(it, &parse_file.task_two)),
-    )
+    let mut ans1: Option<String> = None;
+    let mut ans2: Option<String> = None;
+
+    for line in text.split('\n').filter(|line| !line.is_empty()) {
+        if let Some(ans) = parse(line, &parse_file.task_one)
+            && ans1.is_none()
+        {
+            ans1 = Some(ans);
+        } else if let Some(ans) = parse(line, &parse_file.task_two)
+            && ans2.is_none()
+        {
+            ans2 = Some(ans);
+        }
+    }
+    (ans1, ans2)
 }
 
 async fn get_cache_path(day: u32) -> Result<PathBuf, AocError> {
