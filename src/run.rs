@@ -23,16 +23,6 @@ fn get_input_file(matches: &ArgMatches) -> &str {
     }
 }
 
-fn read_and_print_lines(reader: impl std::io::Read) -> Result<Vec<String>, std::io::Error> {
-    let mut lines = Vec::new();
-    for line in BufReader::new(reader).lines() {
-        let line = line?;
-        println!("{}", line);
-        lines.push(line);
-    }
-    Ok(lines)
-}
-
 pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
     let day = get_day(matches)?;
     let path = get_root_path()?;
@@ -73,18 +63,18 @@ pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
         .chain(["--color", "always"])
         .chain(std::iter::once(input));
 
-    let (stdout_reader, stdout_writer) = std::io::pipe().unwrap();
-    let (stderr_reader, stderr_writer) = std::io::pipe().unwrap();
-
     let cmd = cmd("cargo", args);
-    cmd.dir(&dir)
-        .stdout_file(stdout_writer)
-        .stderr_file(stderr_writer)
-        .start()?;
+    let reader = cmd.dir(&dir).stdout_capture().stderr_null().reader()?;
 
-    let stderr_thread = std::thread::spawn(|| read_and_print_lines(stderr_reader));
-    let out = read_and_print_lines(stdout_reader)?.join("\n");
-    stderr_thread.join().unwrap()?;
+    let reader = BufReader::new(reader);
+    let mut lines = reader.lines();
+
+    let mut out = String::new();
+    while let Some(Ok(line)) = lines.next() {
+        println!("{}", line);
+        out.push_str(&line);
+        out.push('\n');
+    }
 
     if matches.get_flag("assert") {
         let parse_file = get_parse_file(&path, &dir);
