@@ -116,8 +116,24 @@ pub fn filter_days_based_on_folder(
         .copied()
         .collect())
 }
+pub fn parse_get_times2(stdout: &[u8]) -> Result<(usize, Option<usize>), AocError> {
+    let unit = get_time_symbol();
+    let parse = |line: &str| -> Result<usize, AocError> {
+        let start = line.find('(').ok_or(AocError::ParseStdout)?;
+        let stop = line
+            .find(&format!("{unit})"))
+            .ok_or(AocError::ParseStdout)?;
+        Ok(line[start + 1..stop].parse().unwrap())
+    };
+    let text = std::str::from_utf8(&stdout).unwrap();
+    let mut iter = text.split('\n');
+    let p1 = parse(iter.next().unwrap())?;
+    let p2 = iter.next().and_then(|n| parse(n).ok());
 
-pub fn parse_get_times(output: Output) -> Result<(usize, Option<usize>), AocError> {
+    Ok((p1, p2))
+}
+
+pub fn parse_get_times(output: &Output) -> Result<(usize, Option<usize>), AocError> {
     let unit = get_time_symbol();
     let parse = |line: &str| -> Result<usize, AocError> {
         let start = line.find('(').ok_or(AocError::ParseStdout)?;
@@ -132,6 +148,34 @@ pub fn parse_get_times(output: Output) -> Result<(usize, Option<usize>), AocErro
     let p2 = iter.next().and_then(|n| parse(n).ok());
 
     Ok((p1, p2))
+}
+
+pub fn parse_get_answers2(stdout: &[u8]) -> (Option<String>, Option<String>) {
+    let text = std::str::from_utf8(&stdout).unwrap();
+    let strip = strip_ansi_escapes::strip(text);
+    let text = std::str::from_utf8(&strip).unwrap();
+
+    let parse = |line: &str| {
+        line.split_ascii_whitespace()
+            .next_back()
+            .map(|s| s.to_string())
+    };
+    let mut iter = text.split('\n');
+    (iter.next().and_then(parse), iter.next().and_then(parse))
+}
+
+pub fn parse_get_answers(output: Output) -> (Option<String>, Option<String>) {
+    let text = std::str::from_utf8(&output.stdout).unwrap();
+    let strip = strip_ansi_escapes::strip(text);
+    let text = std::str::from_utf8(&strip).unwrap();
+
+    let parse = |line: &str| {
+        line.split_ascii_whitespace()
+            .next_back()
+            .map(|s| s.to_string())
+    };
+    let mut iter = text.split('\n');
+    (iter.next().and_then(parse), iter.next().and_then(parse))
 }
 
 pub fn get_target(path_buf: PathBuf, day: usize) -> PathBuf {

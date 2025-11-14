@@ -1,4 +1,4 @@
-use crate::language::{Language, RunningArgs};
+use crate::language::{Language, RunningArgs, r#trait::Compile};
 use duct::cmd;
 pub struct Rust;
 
@@ -17,5 +17,36 @@ impl Language for Rust {
             .chain(std::iter::once(input.as_str()));
 
         cmd("cargo", command_args).dir(args.common.day_folder)
+    }
+}
+
+impl Compile for Rust {
+    fn compile(&self, args: RunningArgs) -> std::io::Result<duct::Expression> {
+        let command_args =
+            std::iter::once("build").chain(std::iter::once("--release").filter(|_| args.release));
+        let out = cmd("cargo", command_args)
+            .dir(args.common.day_folder)
+            .stdout_null()
+            .stderr_capture()
+            .unchecked()
+            .run()?;
+
+        if !out.status.success() {
+            let err = std::str::from_utf8(&out.stderr).unwrap();
+            return Err(std::io::Error::other(err.to_owned()));
+        }
+
+        let mode = if args.release { "release" } else { "debug" };
+
+        let bin = format!("day_{:02}", args.common.day);
+        let target = args
+            .common
+            .root_folder
+            .join(&bin)
+            .join("target")
+            .join(mode)
+            .join(&bin);
+
+        Ok(cmd!(target, args.common.input_file))
     }
 }

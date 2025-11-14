@@ -200,6 +200,7 @@ pub async fn get_running_args(matches: &ArgMatches) -> Result<RunningArgs, AocEr
         release,
         common: Common {
             file: main,
+            day: day as i32,
             day_folder: day_path,
             root_folder: root,
             input_file: input,

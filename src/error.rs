@@ -1,3 +1,5 @@
+use std::sync::mpsc;
+
 use thiserror::Error;
 
 #[derive(Error, Debug)]

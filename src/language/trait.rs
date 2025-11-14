@@ -5,11 +5,16 @@ pub trait Language {
     fn execute(&self, args: RunningArgs) -> duct::Expression;
 }
 
+pub trait Compile: Language {
+    fn compile(&self, args: RunningArgs) -> std::io::Result<duct::Expression>;
+}
+
 #[allow(dead_code)]
 #[derive(Default, Debug)]
 pub struct Common {
     pub file: PathBuf,
     pub day_folder: PathBuf,
+    pub day: i32,
     pub root_folder: PathBuf,
     pub input_file: PathBuf,
 }
