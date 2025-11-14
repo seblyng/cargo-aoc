@@ -20,6 +20,8 @@ indicatif = { version = "0.18.2", optional = true }
 duct = "1.1.0"
 thiserror = "2.0.17"
 regex = "1.12.2"
+serde_regex = "1.1.0"
+toml = "0.9.8"
 
 
 [features]

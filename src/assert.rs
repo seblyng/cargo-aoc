@@ -1,6 +1,7 @@
 use crate::{
     error::AocError,
-    util::{file::ParseFile, get_day_title_and_answers, parse_get_answers, Task},
+    task_config::Config,
+    util::{Task, get_day_title_and_answers},
 };
 
 fn assert_print_equal(expected: &str, actual: &str, task: Task) {
@@ -24,14 +25,9 @@ fn assert_print_fail(s: &str, task: Task) {
     )
 }
 
-pub async fn assert_answer(
-    out: &str,
-    day: u32,
-    year: i32,
-    parse_file: ParseFile,
-) -> Result<(), AocError> {
+pub async fn assert_answer(out: &str, day: u32, year: i32, config: Config) -> Result<(), AocError> {
     let info = get_day_title_and_answers(day, year as u32).await?;
-    let (p1, p2) = parse_get_answers(out, parse_file);
+    let (p1, p2) = config.get_answers(out);
 
     match (p1, p2, info.part1_answer, info.part2_answer) {
         (Some(p1), Some(p2), Some(a1), Some(a2)) => {

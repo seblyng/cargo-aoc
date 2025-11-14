@@ -1,5 +1,4 @@
 use clap::Arg;
-use regex::Regex;
 use std::path::PathBuf;
 
 use chrono::Datelike;
@@ -10,7 +9,7 @@ use self::{
     file::{day_path, get_day_from_path},
     request::AocRequest,
 };
-use crate::{error::AocError, util::file::ParseFile};
+use crate::error::AocError;
 
 pub mod file;
 pub mod request;
@@ -107,35 +106,6 @@ pub async fn get_day_title_and_answers(day: u32, year: u32) -> Result<AocInfo, A
     Ok(info)
 }
 
-pub fn parse_get_answers(output: &str, parse_file: ParseFile) -> (Option<String>, Option<String>) {
-    let strip = strip_ansi_escapes::strip(output);
-    let text = std::str::from_utf8(&strip).unwrap();
-
-    let parse = |line: &str, regex: &Regex| {
-        regex
-            .captures(line)
-            .iter()
-            .next()
-            .map(|cap| cap[1].to_string())
-    };
-
-    let mut ans1: Option<String> = None;
-    let mut ans2: Option<String> = None;
-
-    for line in text.split('\n').filter(|line| !line.is_empty()) {
-        if let Some(ans) = parse(line, &parse_file.task_one)
-            && ans1.is_none()
-        {
-            ans1 = Some(ans);
-        } else if let Some(ans) = parse(line, &parse_file.task_two)
-            && ans2.is_none()
-        {
-            ans2 = Some(ans);
-        }
-    }
-    (ans1, ans2)
-}
-
 async fn get_cache_path(day: u32) -> Result<PathBuf, AocError> {
     // Tries to read it from the cache before making a request
     let path = get_root_path()?;
@@ -188,13 +158,15 @@ pub fn get_day_argument() -> Arg {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::task_config::{Config, TaskConfig};
+
+    use regex::Regex;
 
     #[test]
     fn test_parse_output() {
         let output = "12345\n67890";
 
-        let (a1, a2) = parse_get_answers(output, ParseFile::default());
+        let (a1, a2) = Config::default().get_answers(output);
         assert_eq!(a1, Some("12345".to_owned()));
         assert_eq!(a2, Some("67890".to_owned()));
     }
@@ -209,7 +181,7 @@ mod tests {
 
 "#;
 
-        let (a1, a2) = parse_get_answers(output, ParseFile::default());
+        let (a1, a2) = Config::default().get_answers(output);
         assert_eq!(a1, Some("12345".to_owned()));
         assert_eq!(a2, Some("67890".to_owned()));
     }
@@ -221,12 +193,18 @@ mod tests {
 (3ms)   Task two: 67890
 "#;
 
-        let parse_file = ParseFile {
-            task_one: Regex::new(r"Task one:\s*(\S+)").unwrap(),
-            task_two: Regex::new(r"Task two:\s*(\S+)").unwrap(),
+        let config = Config {
+            task_one: TaskConfig {
+                answer: Regex::new(r"Task one:\s*(\S+)").unwrap(),
+                time: None,
+            },
+            task_two: TaskConfig {
+                answer: Regex::new(r"Task two:\s*(\S+)").unwrap(),
+                time: None,
+            },
         };
 
-        let (a1, a2) = parse_get_answers(output, parse_file);
+        let (a1, a2) = config.get_answers(output);
         assert_eq!(a1, Some("12345".to_owned()));
         assert_eq!(a2, Some("67890".to_owned()));
     }
@@ -240,12 +218,18 @@ mod tests {
 (0ms)   Task one: 11
 (1ms)   Task two: 22
 "#;
-        let parse_file = ParseFile {
-            task_one: Regex::new(r"Task one:\s*(\S+)").unwrap(),
-            task_two: Regex::new(r"Task two:\s*(\S+)").unwrap(),
+        let config = Config {
+            task_one: TaskConfig {
+                answer: Regex::new(r"Task one:\s*(\S+)").unwrap(),
+                time: None,
+            },
+            task_two: TaskConfig {
+                answer: Regex::new(r"Task two:\s*(\S+)").unwrap(),
+                time: None,
+            },
         };
 
-        let (a1, a2) = parse_get_answers(output, parse_file);
+        let (a1, a2) = config.get_answers(output);
         assert_eq!(a1, Some("11".to_owned()));
         assert_eq!(a2, Some("22".to_owned()));
     }
@@ -257,8 +241,7 @@ bar
 (0ms)   Task one: 11
 (1ms)   Task two: 22
 "#;
-        let parse_file = ParseFile::default();
-        let (a1, a2) = parse_get_answers(output, parse_file);
+        let (a1, a2) = Config::default().get_answers(output);
         assert_eq!(a1, Some("foo".into()));
         assert_eq!(a2, Some("bar".into()));
     }

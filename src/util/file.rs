@@ -5,11 +5,10 @@ use std::{
 };
 
 use chrono::Datelike;
-use regex::Regex;
 use reqwest::StatusCode;
 
 use super::request::AocRequest;
-use crate::error::AocError;
+use crate::{error::AocError, task_config::Config};
 
 pub fn get_day_from_path() -> Result<Option<u32>, AocError> {
     let get_day = |s: &str| -> Option<u32> {
@@ -138,21 +137,7 @@ pub async fn download_input_file(day: u32, year: i32, dir: &Path) -> Result<(), 
     Ok(())
 }
 
-pub struct ParseFile {
-    pub task_one: Regex,
-    pub task_two: Regex,
-}
-
-impl Default for ParseFile {
-    fn default() -> Self {
-        ParseFile {
-            task_one: Regex::new(r"^(.*)$").unwrap(),
-            task_two: Regex::new(r"^(.*)$").unwrap(),
-        }
-    }
-}
-
-pub fn get_parse_file(root: &Path, day: &Path) -> ParseFile {
+pub fn get_parse_config(root: &Path, day: &Path) -> Config {
     let f = || {
         if let Some(file) = find_file(day, ".parse") {
             return Some(file);
@@ -171,18 +156,8 @@ pub fn get_parse_file(root: &Path, day: &Path) -> ParseFile {
         None
     };
 
-    f().map(|it| {
-        let content = std::fs::read_to_string(it).unwrap();
-        let mut iter = content.lines();
-        let line1 = iter.next().expect("No first line in .parse file found");
-        let line2 = iter.next().expect("No second line in .parse file found");
-
-        ParseFile {
-            task_one: Regex::new(line1).expect("Invalid regex in first line of .parse file"),
-            task_two: Regex::new(line2).expect("Invalid regex in second line of .parse file"),
-        }
-    })
-    .unwrap_or_default()
+    f().and_then(|path| Config::new(&path).ok())
+        .unwrap_or_default()
 }
 
 pub fn find_file(start_dir: &Path, filename: &str) -> Option<PathBuf> {

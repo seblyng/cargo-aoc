@@ -10,7 +10,7 @@ use crate::{
     assert::assert_answer,
     error::AocError,
     util::{
-        file::{day_path, download_input_file, get_parse_file, get_root_path},
+        file::{day_path, download_input_file, get_parse_config, get_root_path},
         get_day,
     },
 };
@@ -77,14 +77,14 @@ pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
     }
 
     if matches.get_flag("assert") {
-        let parse_file = get_parse_file(&path, &dir);
+        let parse_file = get_parse_config(&path, &dir);
         assert_answer(&out, day, year, parse_file).await?;
     }
 
     // Only try to submit if the submit flag is passed
     #[cfg(feature = "submit")]
     if let Some(task) = get_submit_task(matches).transpose()? {
-        let parse_file = get_parse_file(&path, &dir);
+        let parse_file = get_parse_config(&path, &dir);
         let output = submit::submit(&out, task, day, year, parse_file).await?;
         println!("Task {}: {}", task, output);
     }
