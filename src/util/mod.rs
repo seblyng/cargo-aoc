@@ -57,11 +57,17 @@ pub fn get_time_symbol() -> String {
     if sym == "us" { "μs".to_owned() } else { sym }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AocInfo {
     pub title: String,
     pub part1_answer: Option<String>,
     pub part2_answer: Option<String>,
+}
+
+impl AocInfo {
+    pub fn is_unimplemented(&self) -> bool {
+        self.part1_answer.is_none() && self.part2_answer.is_none()
+    }
 }
 
 pub async fn get_day_title_and_answers(day: u32, year: u32) -> Result<AocInfo, AocError> {

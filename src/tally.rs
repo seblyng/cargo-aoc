@@ -197,6 +197,7 @@ async fn verify_day(
         arguments: Vec::new(),
         common: Common {
             day_folder: day_path.clone(),
+            day: 0,
             root_folder: root_folder,
             file: main.clone(),
             input_file: input,
@@ -299,7 +300,7 @@ fn run_day(
             .output()?;
 
         progress.inc(1);
-        vec.push(parse_get_times(res)?);
+        vec.push(parse_get_times(&res)?);
     }
 
     let len = vec.len();

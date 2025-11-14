@@ -12,6 +12,7 @@ mod run;
 mod setup;
 #[cfg(feature = "tally")]
 mod tally;
+mod tally2;
 mod test;
 mod token;
 mod util;
@@ -73,12 +74,6 @@ async fn main() -> Result<(), AocError> {
                         .required(false)
                         .help("Submit answer")
                         .conflicts_with("test"),
-                    Arg::new("release")
-                        .short('r')
-                        .long("release")
-                        .required(false)
-                        .action(clap::ArgAction::SetTrue)
-                        .help("Set the release flag"),
                     Arg::new("args")
                         .num_args(1..)
                         .trailing_var_arg(true)
@@ -155,7 +150,7 @@ async fn main() -> Result<(), AocError> {
         Some(("bench", matches)) => bench::bench(matches).await?,
 
         #[cfg(feature = "tally")]
-        Some(("tally", matches)) => tally::tally(matches).await?,
+        Some(("tally", matches)) => tally2::tally(matches).await?,
         _ => {
             println!("{}", help);
         }
