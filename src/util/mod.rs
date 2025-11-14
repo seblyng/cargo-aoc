@@ -220,4 +220,36 @@ mod tests {
         assert_eq!(a1, Some("12345".to_owned()));
         assert_eq!(a2, Some("67890".to_owned()));
     }
+
+    #[test]
+    fn test_parse_output_with_rust_stderr_output() {
+        let output = r#"
+ Compiling day_01 v0.1.0 (C:\Source\Advent-of-Code\2024\day_01)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.42s
+     Running `target\debug\day_01.exe C:\Source\Advent-of-Code\2024\day_01\input`
+(0ms)   Task one: 11
+(1ms)   Task two: 22
+"#;
+        let parse_file = ParseFile {
+            task_one: Regex::new(r"Task one:\s*(\S+)").unwrap(),
+            task_two: Regex::new(r"Task two:\s*(\S+)").unwrap(),
+        };
+
+        let (a1, a2) = parse_get_answers(output, parse_file);
+        assert_eq!(a1, Some("11".to_owned()));
+        assert_eq!(a2, Some("22".to_owned()));
+    }
+    #[test]
+    fn test_parse_output_wrong_output_but_as_expected() {
+        let output = r#"
+foo
+bar
+(0ms)   Task one: 11
+(1ms)   Task two: 22
+"#;
+        let parse_file = ParseFile::default();
+        let (a1, a2) = parse_get_answers(output, parse_file);
+        assert_eq!(a1, Some("foo".into()));
+        assert_eq!(a2, Some("bar".into()));
+    }
 }
