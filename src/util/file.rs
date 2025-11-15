@@ -10,6 +10,8 @@ use reqwest::StatusCode;
 use super::request::AocRequest;
 use crate::{error::AocError, task_config::Config};
 
+static PARSE_FILE: &str = ".parse.toml";
+
 pub fn get_day_from_path() -> Result<Option<u32>, AocError> {
     let get_day = |s: &str| -> Option<u32> {
         let mut num = "".to_string();
@@ -139,16 +141,19 @@ pub async fn download_input_file(day: u32, year: i32, dir: &Path) -> Result<(), 
 
 pub fn get_parse_config(root: &Path, day: &Path) -> Config {
     let f = || {
-        if let Some(file) = find_file(day, ".parse") {
+        if let Some(file) = find_file(day, PARSE_FILE) {
             return Some(file);
         }
 
-        let root = root.join(".parse");
+        let root = root.join(PARSE_FILE);
         if root.exists() {
             return Some(root);
         }
 
-        let config = home_dir()?.join(".config").join("cargo-aoc").join(".parse");
+        let config = home_dir()?
+            .join(".config")
+            .join("cargo-aoc")
+            .join(PARSE_FILE);
         if config.exists() {
             return Some(config);
         }

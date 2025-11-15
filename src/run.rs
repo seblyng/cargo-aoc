@@ -64,7 +64,7 @@ pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
         .chain(std::iter::once(input));
 
     let cmd = cmd("cargo", args);
-    let reader = cmd.dir(&dir).stdout_capture().stderr_null().reader()?;
+    let reader = cmd.dir(&dir).stderr_to_stdout().reader()?;
 
     let reader = BufReader::new(reader);
     let mut lines = reader.lines();
