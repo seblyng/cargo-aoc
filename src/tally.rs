@@ -1,52 +1,8 @@
-use std::{path::PathBuf, process::Command};
-
 use clap::ArgMatches;
-use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use tokio::runtime::Runtime;
 
-use crate::{
-    error::AocError,
-    language::{Common, REGISTER, RunningArgs},
-    util::{file::*, get_day_title_and_answers, get_time_symbol},
-};
+use crate::{error::AocError, util::get_time_symbol};
 
 use crate::util::tally_util::*;
-
-// Helper function to:
-// 1. iterate over a collection
-// 2. spawn a scoped thread for each item
-// 3. map each item T to a new type U
-// 4. collect the items into some R
-pub fn thread_exec<T, U, I, F, R>(iter: I, f: F) -> R
-where
-    F: Fn(T) -> U + Send + Clone + Copy,
-    R: FromIterator<U>,
-    U: Send,
-    T: Send,
-    I: IntoIterator<Item = T>,
-{
-    // Collecting the JoinHandles are very important to actually spawn the threads.
-    // Removing the collect results in sequential execution
-    #[allow(clippy::needless_collect)]
-    std::thread::scope(|s| {
-        iter.into_iter()
-            .map(|v| s.spawn(move || f(v)))
-            .collect::<Vec<_>>()
-            .into_iter()
-            .map(|h| h.join().unwrap())
-            .collect::<R>()
-    })
-}
-
-fn get_progressbar(len: u64) -> ProgressBar {
-    let sty = ProgressStyle::with_template(
-        "[{elapsed_precise}] {msg}... {bar:40.cyan/blue} {pos:>7}/{len:7}",
-    )
-    .unwrap()
-    .progress_chars("##-");
-
-    ProgressBar::new(len).with_style(sty)
-}
 
 fn print_info(
     days: Vec<(usize, (usize, Option<usize>))>,
@@ -119,244 +75,6 @@ fn print_info(
     println!("\nTOTAL TIME: {}{unit}", total);
 }
 
-fn build_day(
-    day: usize,
-    path: PathBuf,
-    progress: &ProgressBar,
-    year: usize,
-) -> Result<usize, Error> {
-    let mut day_path = path.clone();
-    day_path.push(format!("day_{:02}", day));
-
-    if !day_path.exists() {
-        let runtime = Runtime::new().unwrap();
-        let info = runtime
-            .block_on(get_day_title_and_answers(day as u32, year as u32))
-            .expect("Could not get day title and answer");
-        return Err(Error {
-            title: info.title,
-            day,
-            r#type: ErrorTypes::NotImplementd,
-        });
-    }
-
-    let res = Command::new("cargo")
-        .args(["build", "--release"])
-        .current_dir(day_path)
-        .output()
-        .ok()
-        .unwrap();
-
-    progress.inc(1);
-    if res.status.success() {
-        Ok(day)
-    } else {
-        let details = extract_comiler_error(String::from_utf8(res.stderr).unwrap());
-        let runtime = Runtime::new().unwrap();
-        let info = runtime
-            .block_on(get_day_title_and_answers(day as u32, year as u32))
-            .expect("Could not get day title and answer");
-        Err(Error {
-            title: info.title,
-            day,
-            r#type: ErrorTypes::CompilerError(details),
-        })
-    }
-}
-
-async fn verify_day(
-    day: usize,
-    root_folder: PathBuf,
-    year: usize,
-    progress: &ProgressBar,
-) -> Result<BuildRes, Error> {
-    let day_path = day_path(root_folder.clone(), day as u32)
-        .await
-        .unwrap_or_else(|_| panic!("day {day} is build, but could not find the path"));
-
-    let info = get_day_title_and_answers(day as u32, year as u32)
-        .await
-        .expect("Could not get day title and answer");
-
-    let mut input = day_path.clone();
-    input.push("input");
-    if !input.exists() {
-        download_input_file(day as u32, year as i32, &day_path)
-            .await
-            .map_err(|_| Error {
-                title: info.title.clone(),
-                day,
-                r#type: ErrorTypes::InputDownloadError,
-            })?;
-    }
-
-    let target = get_target(root_folder.clone(), day);
-    let progress = progress.clone();
-    let main = find_file(&day_path, "main").expect("There should be a file here");
-
-    let running_args = RunningArgs {
-        release: true,
-        arguments: Vec::new(),
-        common: Common {
-            day_folder: day_path.clone(),
-            root_folder: root_folder.clone(),
-            day: day as i32,
-            file: main.clone(),
-            input_file: input,
-        },
-    };
-
-    let runner = REGISTER
-        .by_extension(main.extension().unwrap().to_str().unwrap())
-        .unwrap();
-
-    let res = runner
-        .execute(running_args)
-        .stdout_capture()
-        .stderr_capture()
-        .run()
-        .ok()
-        .unwrap();
-
-    if !res.status.success() {
-        let details = extract_runtime_error(res.stderr);
-        if details == "not implemented" {
-            return Err(Error {
-                title: info.title.clone(),
-                day,
-                r#type: ErrorTypes::NotImplementd,
-            });
-        }
-
-        return Err(Error {
-            title: info.title.clone(),
-            day,
-            r#type: ErrorTypes::RuntimeError(details),
-        });
-    }
-
-    let text = std::str::from_utf8(&res.stdout).unwrap();
-    let config = get_parse_config(&root_folder, &day_path);
-    let (_t1, _t2) = config.get_answers(&text);
-    if _t1.is_none() && _t2.is_none() {
-        return Err(Error {
-            title: info.title.clone(),
-            day,
-            r#type: ErrorTypes::NotImplementd,
-        });
-    }
-
-    let mut res = BuildRes::new(day, day_path);
-    res.info.title = info.title;
-
-    res.info.correct1 = _t1 == info.part1_answer;
-    res.info.correct2 = _t2 == info.part2_answer;
-
-    res.info.ans1 = info.part1_answer;
-    res.info.ans2 = info.part2_answer;
-
-    progress.inc(1);
-
-    Ok(res)
-}
-
-async fn compile_and_verify_days(
-    days: Vec<usize>,
-    root_folder: PathBuf,
-    year: usize,
-) -> Result<Vec<Result<BuildRes, Error>>, AocError> {
-    let possible_days = filter_days_based_on_folder(&days, &root_folder)?;
-
-    let progress = get_progressbar(possible_days.len() as u64);
-    progress.set_message("compiling");
-
-    let res: Vec<_> = thread_exec(&days, |day| {
-        build_day(*day, root_folder.clone(), &progress, year)
-    });
-
-    progress.reset();
-    progress.set_message("verifying");
-
-    let days: Vec<_> = thread_exec(res, |day| {
-        day.and_then(|day| {
-            let runtime = Runtime::new().unwrap();
-            runtime.block_on(verify_day(day, root_folder.clone(), year, &progress))
-        })
-    });
-
-    Ok(days)
-}
-
-fn run_day(
-    cargo_folder: PathBuf,
-    day_folder: PathBuf,
-    day: usize,
-    number_of_runs: usize,
-    progress: ProgressBar,
-) -> Result<(usize, Option<usize>), AocError> {
-    let target = get_target(cargo_folder, day);
-    let mut vec = Vec::with_capacity(number_of_runs);
-
-    for _ in 0..number_of_runs {
-        let res = Command::new(&target)
-            .current_dir(&day_folder)
-            .envs(std::env::vars())
-            .output()?;
-
-        progress.inc(1);
-        vec.push(parse_get_times(&res)?);
-    }
-
-    let len = vec.len();
-    let (p1, p2): (usize, Option<usize>) = vec
-        .into_iter()
-        .fold((0, Option::<usize>::None), |(p1, p2), (a, b)| {
-            (p1 + a, p2.zip(b).map(|(p2, b)| p2 + b).or(b))
-        });
-
-    Ok((p1 / len, p2.map(|val| val / len)))
-}
-
-fn run_days(
-    days: Vec<Result<BuildRes, Error>>,
-    cargo_folder: PathBuf,
-    number_of_runs: usize,
-) -> Result<Vec<Result<BuildRes, Error>>, AocError> {
-    let multi = MultiProgress::new();
-
-    // Sort it to get the progress bars in increasing order
-    let mut days = days;
-    days.sort_unstable_by_key(|k| match k {
-        Ok(k) => k.day,
-        Err(e) => e.day,
-    });
-    let days = days
-        .into_iter()
-        .map(|br| {
-            br.map(|br| {
-                let progress = multi.add(get_progressbar(number_of_runs as u64));
-                progress.set_message(format!("Running day {}", br.day));
-                (br, progress)
-            })
-        })
-        .collect::<Vec<_>>();
-
-    Ok(thread_exec(days, |res| {
-        res.map(|(mut br, progress)| {
-            let (p1, p2) = run_day(
-                cargo_folder.clone(),
-                br.path.clone(),
-                br.day,
-                number_of_runs,
-                progress,
-            )
-            .unwrap_or_else(|_| panic!("error running day {}", br.day));
-            br.time = Time(p1, p2);
-            br
-        })
-    }))
-}
-
 fn format_duration(duration: usize) -> String {
     let unit = get_time_symbol();
     format!("{}{}", duration, unit)
@@ -387,7 +105,13 @@ pub fn print_table(days: Vec<Result<BuildRes, Error>>, year: usize) {
     let max_part1_time_len = days
         .iter()
         .flatten()
-        .map(|br| format_duration(br.time.0).len())
+        .map(|br| {
+            br.time
+                .0
+                .map(format_duration)
+                .unwrap_or("NA".to_string())
+                .len()
+        })
         .max()
         .unwrap_or(5);
     let max_part2_time_len = days
@@ -449,7 +173,7 @@ pub fn print_table(days: Vec<Result<BuildRes, Error>>, year: usize) {
                     day.day,
                     day.info.title,
                     day.info.ans1.unwrap_or("NA".to_string()),
-                    format_duration(day.time.0),
+                    day.time.0.map(format_duration).unwrap_or("NA".to_string()),
                     part1_symbol,
                     day.info.ans2.unwrap_or("NA".to_string()),
                     day.time.1.map(format_duration).unwrap_or("NA".to_string()),
@@ -478,41 +202,4 @@ pub fn print_table(days: Vec<Result<BuildRes, Error>>, year: usize) {
         "═".repeat(max_part2_time_len + 2),
         "═".repeat(4),
     );
-}
-
-pub async fn tally(matches: &ArgMatches) -> Result<(), AocError> {
-    let number_of_runs = get_number_of_runs(matches)?;
-
-    let root_folder = get_root_path()?;
-    let year = root_folder
-        .file_name()
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .parse::<usize>()
-        .unwrap();
-    let possible_days = get_possible_days(year)?;
-    let days = compile_and_verify_days(possible_days, root_folder.clone(), year).await?;
-    let mut days = run_days(days, root_folder, number_of_runs)?;
-    let mut dont_have = Vec::new();
-
-    days.retain(|elem| {
-        if matches!(elem, Err(e) if e.r#type == ErrorTypes::NotImplementd) {
-            dont_have.push(elem.as_ref().unwrap_err().day);
-            false
-        } else {
-            true
-        }
-    });
-
-    let have = days
-        .iter()
-        .flatten()
-        .map(|br| (br.day, (br.time.0, br.time.1)))
-        .collect();
-
-    print_table(days, year);
-    print_info(have, dont_have, number_of_runs);
-
-    Ok(())
 }

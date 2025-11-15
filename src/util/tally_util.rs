@@ -18,7 +18,7 @@ pub struct TableInfo {
 }
 
 #[derive(Debug, Default)]
-pub struct Time(pub usize, pub Option<usize>);
+pub struct Time(pub Option<usize>, pub Option<usize>);
 
 #[derive(Debug)]
 pub struct BuildRes {
@@ -46,7 +46,7 @@ impl From<(usize, tally2::RunRes, AocInfo)> for BuildRes {
             day: day,
             path: PathBuf::new(),
             info: table_info,
-            time: Time(res.p1.time.unwrap_or_default(), res.p2.time.clone()),
+            time: Time(res.p1.time, res.p2.time),
         }
     }
 }

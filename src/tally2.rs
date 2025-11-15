@@ -52,7 +52,6 @@ fn convert(
 pub async fn tally(matches: &ArgMatches) -> Result<(), AocError> {
     let number_of_runs = get_number_of_runs(matches)?;
 
-    let res: Vec<(usize, ErrorTypes)> = Vec::new();
     let (s, r) = mpsc::channel::<(usize, ErrorTypes)>();
 
     let root_folder = get_root_path()?;
