@@ -26,14 +26,15 @@ impl Compile for Rust {
             std::iter::once("build").chain(std::iter::once("--release").filter(|_| args.release));
         let out = cmd("cargo", command_args)
             .dir(args.common.day_folder)
-            .stdout_null()
-            .stderr_capture()
+            .stderr_to_stdout()
+            .stdout_capture()
             .unchecked()
             .run()?;
 
         if !out.status.success() {
-            let err = std::str::from_utf8(&out.stderr).unwrap();
-            return Err(std::io::Error::other(err.to_owned()));
+            let err = std::str::from_utf8(&out.stdout).unwrap();
+            let err_line = err.lines().find(|line| line.starts_with("error: "));
+            return Err(std::io::Error::other(err_line.unwrap_or(err)));
         }
 
         let mode = if args.release { "release" } else { "debug" };

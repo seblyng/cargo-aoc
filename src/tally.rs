@@ -17,7 +17,7 @@ use crate::util::tally_util::*;
 // 2. spawn a scoped thread for each item
 // 3. map each item T to a new type U
 // 4. collect the items into some R
-fn thread_exec<T, U, I, F, R>(iter: I, f: F) -> R
+pub fn thread_exec<T, U, I, F, R>(iter: I, f: F) -> R
 where
     F: Fn(T) -> U + Send + Clone + Copy,
     R: FromIterator<U>,
@@ -362,7 +362,7 @@ fn format_duration(duration: usize) -> String {
     format!("{}{}", duration, unit)
 }
 
-fn print_table(days: Vec<Result<BuildRes, Error>>, year: usize) {
+pub fn print_table(days: Vec<Result<BuildRes, Error>>, year: usize) {
     let max_name_len = days
         .iter()
         .map(|res| match res {
@@ -458,7 +458,7 @@ fn print_table(days: Vec<Result<BuildRes, Error>>, year: usize) {
             }
             Err(e) => {
                 let available_space = max_total_len - day_header_len - 2;
-                let mut s = e.r#type.to_string();
+                let mut s = e.r#type.to_string().replace('\n', " ");
                 s.truncate(available_space);
                 println!(
                     "║ {:>2} ║ {:max_name_len$} ║ {:available_space$} ║",

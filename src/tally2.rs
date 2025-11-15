@@ -10,102 +10,43 @@ use chrono::prelude::*;
 use clap::ArgMatches;
 use duct::Expression;
 use futures::future::join_all;
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 
 type Sender = mpsc::Sender<(usize, ErrorTypes)>;
 
 use crate::{
     error::AocError,
     language::{Common, Compile, REGISTER, RunningArgs},
+    tally,
+    task_config::Config,
     util::{
         AocInfo,
-        file::{download_input_file, find_file, get_root_path},
+        file::{download_input_file, find_file, get_parse_config, get_root_path},
         get_day_title_and_answers,
-        tally_util::{self, get_number_of_runs, parse_get_times, parse_get_times2},
+        tally_util::{self, BuildRes, get_number_of_runs, parse_get_times, parse_get_times2},
     },
 };
 
-#[derive(Debug)]
-enum ErrorTypes {
-    MissingDay,
-    InputDownload,
-    Compiler(String),
-    Runtime(String),
-    MissingImplementation,
-    GetTime,
-    GetAnswers,
-}
+fn convert(
+    days: impl Iterator<Item = (usize, RunRes, AocInfo)>,
+    errs: impl Iterator<Item = (usize, ErrorTypes, AocInfo)>,
+) -> Vec<Result<BuildRes, tally_util::Error>> {
+    let mut vec = days
+        .map(|tuple| Ok::<BuildRes, tally_util::Error>(tuple.into()))
+        .chain(errs.map(|(day, r#type, info)| {
+            Err::<BuildRes, tally_util::Error>(tally_util::Error {
+                day: day,
+                title: info.title.clone(),
+                r#type: r#type.into(),
+            })
+        }))
+        .collect::<Vec<Result<_, tally_util::Error>>>();
 
-#[derive(Debug)]
-struct Answer {
-    value: String,
-    time: usize,
-}
-#[derive(Debug)]
-struct RunRes {
-    p1: Answer,
-    p2: Answer,
-}
-
-async fn run_day(
-    num_runs: usize,
-    year: usize,
-    day: usize,
-    expr: Expression,
-    s: &Sender,
-) -> Result<Option<RunRes>, AocError> {
-    let mut vec = Vec::new();
-    for _ in 0..num_runs {
-        let expr = expr.clone();
-
-        let (mut r, w) = std::io::pipe().unwrap();
-        let (mut stdoutr, stdoutw) = std::io::pipe().unwrap();
-        let out = expr
-            .unchecked()
-            .stderr_file(w)
-            .stdout_file(stdoutw)
-            .run()
-            .expect("duct panic");
-
-        if !out.status.success() {
-            let mut vec = Vec::new();
-            r.read_to_end(&mut vec).expect("reading to vec");
-            let text = std::str::from_utf8(&vec)
-                .expect("Getting stderr")
-                .to_owned();
-            s.send((day, ErrorTypes::Runtime(text))).unwrap();
-            return Ok(None);
-        }
-
-        let mut stdout = Vec::new();
-        stdoutr.read_to_end(&mut stdout).expect("reading to vec");
-
-        let Ok((t1, t2)) = parse_get_times2(&stdout) else {
-            s.send((day, ErrorTypes::GetTime)).unwrap();
-            return Ok(None);
-        };
-        let t2 = t2.unwrap_or_default();
-        let ((Some(p1), p2)) = tally_util::parse_get_answers2(&stdout) else {
-            s.send((day, ErrorTypes::GetAnswers)).unwrap();
-            return Ok(None);
-        };
-        let p2 = p2.unwrap_or_default();
-
-        vec.push(((p1, t1), (p2, t2)));
-    }
-
-    let res = RunRes {
-        p1: Answer {
-            value: vec[0].0.0.clone(),
-            time: vec.iter().map(|(p1, p2)| p1.1).sum::<usize>() / num_runs,
-        },
-        p2: Answer {
-            value: vec[0].1.0.clone(),
-            time: vec.iter().map(|(p1, p2)| p2.1).sum::<usize>() / num_runs,
-        },
-    };
-
-    Ok(Some(res))
+    vec.sort_unstable_by_key(|r| match r {
+        Ok(res) => res.day,
+        Err(e) => e.day,
+    });
+    vec
 }
 
 pub async fn tally(matches: &ArgMatches) -> Result<(), AocError> {
@@ -126,32 +67,150 @@ pub async fn tally(matches: &ArgMatches) -> Result<(), AocError> {
     let folders = get_day_folders(&root_folder, days, &s)?;
     let folders = folders.collect::<Vec<_>>();
 
-    let days = folders.iter().map(|(day, _path)| *day).collect::<Vec<_>>();
-    let map = get_aoc_infos(year, &days).await?;
+    let days2 = get_possible_days(year)?.collect::<Vec<_>>();
+    let map = get_aoc_infos(year, &days2).await?;
+    let configs = get_aoc_configs(&root_folder, folders.iter());
 
     let compiled = compile_days(&root_folder, year, folders.into_iter(), &s).await?;
-    let mut verified = verify_days(
+    let verified = verify_days(
         compiled.map(|(day, expr)| (day, expr, map[&day].clone())),
         &s,
     )
     .await?;
 
-    verified.next();
-    let (day, expr, info) = verified.next().unwrap();
-    // dbg!(&day, &expr, &info);
-    let r = run_day(number_of_runs, year, day, expr, &s).await?;
-    // dbg!(r);
+    let run_res = run_days(
+        number_of_runs,
+        year,
+        verified.map(|(day, expr, info)| (day, expr, info, &configs[&day])),
+        &s,
+    )
+    .await?;
 
-    // while let Ok(res) = r.try_recv() {
-    //     match res {
-    //         (_day, err) if !matches!(err, ErrorTypes::MissingDay) => {
-    //             dbg!(err);
-    //         }
-    //         _ => {}
-    //     };
-    // }
+    let vec = convert(
+        run_res,
+        r.try_iter()
+            .map(|(day, r#type)| (day, r#type, map[&day].clone())),
+    );
 
+    tally::print_table(vec, year);
     Ok(())
+}
+
+#[derive(Debug)]
+pub enum ErrorTypes {
+    MissingDay,
+    InputDownload,
+    Compiler(String),
+    Runtime(String),
+    MissingImplementation,
+    GetAnswers,
+}
+
+#[derive(Debug)]
+pub struct Answer {
+    pub value: Option<String>,
+    pub time: Option<usize>,
+}
+#[derive(Debug)]
+pub struct RunRes {
+    pub p1: Answer,
+    pub p2: Answer,
+}
+
+async fn run_days(
+    num_runs: usize,
+    year: usize,
+    days: impl Iterator<Item = (usize, Expression, AocInfo, &Config)>,
+    s: &Sender,
+) -> Result<impl Iterator<Item = (usize, RunRes, AocInfo)>, AocError> {
+    let multi = MultiProgress::new();
+
+    let tasks = days.into_iter().map(move |(day, expr, info, config)| {
+        let progress = multi.add(get_progressbar(num_runs as u64));
+        progress.set_message(format!("Running day {}", day));
+        async move {
+            run_day(num_runs, year, day, expr, config, s, progress)
+                .await
+                .map(|res| (day, res, info))
+        }
+    });
+
+    Ok(join_all(tasks).await.into_iter().flatten())
+}
+
+async fn run_day(
+    num_runs: usize,
+    year: usize,
+    day: usize,
+    expr: Expression,
+    config: &Config,
+    s: &Sender,
+    progress: ProgressBar,
+) -> Option<RunRes> {
+    let mut vec = Vec::new();
+    for _ in 0..num_runs {
+        let expr = expr.clone();
+
+        let (mut r, w) = std::io::pipe().unwrap();
+        let (mut stdoutr, stdoutw) = std::io::pipe().unwrap();
+        let out = expr
+            .unchecked()
+            .stderr_file(w)
+            .stdout_file(stdoutw)
+            .run()
+            .expect("duct panic");
+        if !out.status.success() {
+            let mut vec = Vec::new();
+            r.read_to_end(&mut vec).expect("reading to vec");
+            let text = std::str::from_utf8(&vec)
+                .expect("Getting stderr")
+                .to_owned();
+            s.send((day, ErrorTypes::Runtime(text))).unwrap();
+            progress.finish();
+            return None;
+        }
+
+        let mut stdout = Vec::new();
+        stdoutr.read_to_end(&mut stdout).expect("reading to vec");
+        let stdout = std::str::from_utf8(&stdout).expect("error converting stdout to text");
+
+        let (Some(p1), p2) = config.get_answers(stdout) else {
+            s.send((day, ErrorTypes::GetAnswers)).unwrap();
+            progress.finish();
+            return None;
+        };
+
+        let (t1, t2) = config.get_times(stdout);
+
+        vec.push(((p1, t1), (p2, t2)));
+
+        progress.inc(1);
+    }
+    let p1_time = vec
+        .iter()
+        .map(|((_p1, t1), _p2)| t1)
+        .copied()
+        .collect::<Option<Vec<usize>>>()
+        .map(|vals| vals.into_iter().sum::<usize>() / num_runs);
+
+    let p2_time = vec
+        .iter()
+        .map(|(_p1, (_p2, t2))| t2)
+        .copied()
+        .collect::<Option<Vec<usize>>>()
+        .map(|vals| vals.into_iter().sum::<usize>() / num_runs);
+    let res = RunRes {
+        p1: Answer {
+            value: Some(vec[0].0.0.clone()),
+            time: p1_time,
+        },
+        p2: Answer {
+            value: vec[0].1.0.clone(),
+            time: p2_time,
+        },
+    };
+
+    Some(res)
 }
 
 async fn verify_days(
@@ -161,10 +220,10 @@ async fn verify_days(
     let progress = get_progressbar(days.size_hint().0 as u64);
     progress.set_message("verifying");
 
-    let progess = &progress;
     Ok(days
         .into_iter()
         .map(move |(day, expr, info)| {
+            let progress = progress.clone();
             let res = if info.is_unimplemented() {
                 s.send((day, ErrorTypes::MissingImplementation)).unwrap();
                 None
@@ -174,7 +233,20 @@ async fn verify_days(
             progress.inc(1);
             res
         })
-        .flatten())
+        .flatten()
+        .collect::<Vec<_>>()
+        .into_iter())
+}
+
+fn get_aoc_configs<'a>(
+    year: &Path,
+    days: impl Iterator<Item = &'a (usize, PathBuf)>,
+) -> HashMap<usize, Config> {
+    days.map(|(day, path)| {
+        let config = get_parse_config(year, path);
+        (*day, config)
+    })
+    .collect::<HashMap<_, _>>()
 }
 
 async fn get_aoc_infos(year: usize, days: &[usize]) -> Result<HashMap<usize, AocInfo>, AocError> {
@@ -253,26 +325,37 @@ async fn compile_days(
     let progress = get_progressbar(days.size_hint().0 as _);
     progress.set_message("compiling");
 
-    let tasks = days.into_iter().map(|(day, folder)| {
+    let tasks = days.map(|(day, folder)| {
         let s = s.clone();
         let root = root.to_path_buf();
-        let progress = progress.clone();
 
-        tokio::spawn(async move {
-            let res = if let Some(args) = prepare_args(&root, year, day, &folder, &s).await {
-                compile_day(day, args, &s).map(|r| (day, r))
-            } else {
-                None
-            };
-            progress.inc(1);
-            res
-        })
+        async move {
+            let args = prepare_args(&root, year, day, &folder, &s).await;
+            args.map(|args| (day, args))
+        }
     });
 
-    Ok(futures::future::join_all(tasks)
-        .await
-        .into_iter()
-        .filter_map(|res| res.ok().flatten()))
+    let vec = futures::future::join_all(tasks).await;
+
+    let res = std::thread::scope(|scope| {
+        let mut handles = Vec::new();
+        for (day, arg) in vec.into_iter().flatten() {
+            let progress = progress.clone();
+            handles.push(scope.spawn(move || {
+                let res = compile_day(day, arg, &s);
+                progress.inc(1);
+                res.map(|expr| (day, expr))
+            }));
+        }
+
+        handles
+            .into_iter()
+            .map(|h| h.join().unwrap())
+            .flatten()
+            .collect::<Vec<_>>()
+    });
+
+    Ok(res.into_iter())
 }
 
 pub fn get_day_folders(

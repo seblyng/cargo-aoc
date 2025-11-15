@@ -3,7 +3,7 @@ use std::{path::PathBuf, process::Output};
 use chrono::Datelike;
 use clap::ArgMatches;
 
-use crate::error::AocError;
+use crate::{error::AocError, tally2, util::AocInfo};
 
 use super::get_time_symbol;
 
@@ -28,6 +28,29 @@ pub struct BuildRes {
     pub time: Time,
 }
 
+impl From<(usize, tally2::RunRes, AocInfo)> for BuildRes {
+    fn from((day, res, info): (usize, tally2::RunRes, AocInfo)) -> Self {
+        let is_correct = |ans: &Option<String>, real: &Option<String>| {
+            ans.is_some() && real.is_some() && ans == real
+        };
+
+        let table_info = TableInfo {
+            title: info.title,
+            ans1: res.p1.value.clone(),
+            ans2: res.p2.value.clone(),
+            correct1: is_correct(&res.p1.value, &info.part1_answer),
+            correct2: is_correct(&res.p2.value, &info.part2_answer),
+        };
+
+        BuildRes {
+            day: day,
+            path: PathBuf::new(),
+            info: table_info,
+            time: Time(res.p1.time.unwrap_or_default(), res.p2.time.clone()),
+        }
+    }
+}
+
 impl BuildRes {
     pub fn new(day: usize, path: PathBuf) -> Self {
         Self {
@@ -45,6 +68,19 @@ pub enum ErrorTypes {
     RuntimeError(String),
     InputDownloadError,
     NotImplementd,
+}
+
+impl From<tally2::ErrorTypes> for ErrorTypes {
+    fn from(value: tally2::ErrorTypes) -> Self {
+        match value {
+            tally2::ErrorTypes::MissingDay => ErrorTypes::NotImplementd,
+            tally2::ErrorTypes::InputDownload => ErrorTypes::InputDownloadError,
+            tally2::ErrorTypes::Compiler(s) => ErrorTypes::CompilerError(s),
+            tally2::ErrorTypes::Runtime(s) => ErrorTypes::RuntimeError(s),
+            tally2::ErrorTypes::MissingImplementation => ErrorTypes::NotImplementd,
+            tally2::ErrorTypes::GetAnswers => ErrorTypes::NotImplementd,
+        }
+    }
 }
 
 impl std::fmt::Display for ErrorTypes {
