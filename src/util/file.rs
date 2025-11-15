@@ -1,4 +1,5 @@
 use std::{
+    env::home_dir,
     ffi::OsStr,
     path::{Path, PathBuf},
 };
@@ -7,7 +8,9 @@ use chrono::Datelike;
 use reqwest::StatusCode;
 
 use super::request::AocRequest;
-use crate::error::AocError;
+use crate::{error::AocError, task_config::Config};
+
+static PARSE_FILE: &str = ".parse.toml";
 
 pub fn get_day_from_path() -> Result<Option<u32>, AocError> {
     let get_day = |s: &str| -> Option<u32> {
@@ -134,4 +137,70 @@ pub async fn download_input_file(day: u32, year: i32, dir: &Path) -> Result<(), 
     let bytes = res.bytes().await?;
     tokio::fs::write(dir.join("input"), bytes).await?;
     Ok(())
+}
+
+pub fn get_parse_config(root: &Path, day: &Path) -> Config {
+    let f = || {
+        if let Some(file) = find_file(day, PARSE_FILE) {
+            return Some(file);
+        }
+
+        let root = root.join(PARSE_FILE);
+        if root.exists() {
+            return Some(root);
+        }
+
+        let config = home_dir()?
+            .join(".config")
+            .join("cargo-aoc")
+            .join(PARSE_FILE);
+        if config.exists() {
+            return Some(config);
+        }
+
+        None
+    };
+
+    f().and_then(|path| Config::new(&path).ok())
+        .unwrap_or_default()
+}
+
+pub fn find_file(start_dir: &Path, filename: &str) -> Option<PathBuf> {
+    let entries = match std::fs::read_dir(start_dir) {
+        Ok(entries) => entries,
+        Err(_) => return None,
+    };
+
+    let mut subdirs = Vec::new();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if path.is_file()
+            && path
+                .file_name()
+                .is_some_and(|f| f.to_str().unwrap().starts_with(filename))
+        {
+            return Some(path);
+        } else if path.is_dir() {
+            subdirs.push(path);
+        }
+    }
+
+    subdirs.sort_by(|a, b| {
+        let count_a = std::fs::read_dir(a)
+            .map(|r| r.count())
+            .unwrap_or(usize::MAX);
+        let count_b = std::fs::read_dir(b)
+            .map(|r| r.count())
+            .unwrap_or(usize::MAX);
+        count_a.cmp(&count_b)
+    });
+
+    for subdir in subdirs {
+        if let Some(found) = find_file(&subdir, filename) {
+            return Some(found);
+        }
+    }
+
+    None
 }

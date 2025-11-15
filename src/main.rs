@@ -11,6 +11,7 @@ mod run;
 mod setup;
 #[cfg(feature = "tally")]
 mod tally;
+mod task_config;
 mod test;
 mod token;
 mod util;
