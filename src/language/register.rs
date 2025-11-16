@@ -3,6 +3,7 @@ use std::sync::LazyLock;
 use crate::language::Compile;
 
 use super::Language;
+use super::impls::*;
 
 pub struct Register {
     langs: Vec<Box<dyn Language + Sync + Send>>,
@@ -42,8 +43,10 @@ impl Register {
 pub static REGISTER: LazyLock<Register> = LazyLock::new(|| {
     let mut r = Register::new();
     // Add impls here
-    r.register(super::impls::Rust);
+    r.register(Rust);
+    r.register(Python);
 
-    r.register_compiler(super::impls::Rust);
+    r.register_compiler(Rust);
+    r.register_compiler(Python);
     r
 });
