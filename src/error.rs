@@ -48,4 +48,7 @@ pub enum AocError {
 
     #[error("Setup for year already exists")]
     SetupExists,
+
+    #[error("Unsuppored language with extension {0}")]
+    UnsupporedLanguage(String),
 }
