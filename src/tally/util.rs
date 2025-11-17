@@ -145,7 +145,7 @@ pub fn compile_day(day: usize, args: RunningArgs) -> Result<CompiledDay, (usize,
     }
 }
 
-pub async fn run_day(
+pub fn run_day(
     num_runs: usize,
     expr: Expression,
     config: &Config,

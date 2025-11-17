@@ -4,7 +4,7 @@ use regex::Regex;
 use serde::Deserialize;
 use serde_regex;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct TaskConfig {
     #[serde(with = "serde_regex")]
     pub answer: Regex,
@@ -13,7 +13,7 @@ pub struct TaskConfig {
     pub time: Option<Regex>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     pub task_one: TaskConfig,
     pub task_two: TaskConfig,

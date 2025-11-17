@@ -123,36 +123,38 @@ pub async fn get_run_result(
 ) -> Vec<RunDayResult> {
     let multi = MultiProgress::new();
 
-    let tasks = days.into_iter().map(|v| {
-        let pb = multi.add(get_progressbar(num_runs as u64));
-        let config = &ctx.configs[&v.day];
+    let mut results = Vec::new();
+    std::thread::scope(|scope| {
+        let mut handles = Vec::new();
 
-        async move {
-            let res = match run_day(num_runs, v.expr, config, &pb).await {
-                Ok(run_res) => Ok(RunDayResult {
-                    day: v.day,
-                    info: v.info.clone(),
-                    run: run_res,
-                }),
-                Err(e) => Err((v.day, e)),
-            };
-            res
+        for day in days {
+            let pb = multi.add(get_progressbar(num_runs as u64));
+            let config = ctx.configs[&day.day].clone();
+            handles.push(scope.spawn(move || {
+                run_day(num_runs, day.expr, &config, &pb)
+                    .map(|run_res| RunDayResult {
+                        day: day.day,
+                        info: day.info.clone(),
+                        run: run_res,
+                    })
+                    .map_err(|e| (day.day, e))
+            }));
+        }
+
+        for h in handles {
+            match h.join().unwrap() {
+                Ok(res) => {
+                    results.push(res);
+                }
+
+                Err((day, err)) => {
+                    ctx.push_error(day, err);
+                }
+            }
         }
     });
 
-    let mut to_return = Vec::new();
-    let futs = futures::future::join_all(tasks).await;
-    for res in futs {
-        match res {
-            Ok(r) => {
-                to_return.push(r);
-            }
-            Err((day, err)) => {
-                ctx.push_error(day, err);
-            }
-        }
-    }
-    to_return
+    results
 }
 
 pub fn convert_to_print_format(
