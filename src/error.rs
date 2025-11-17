@@ -11,6 +11,9 @@ pub enum AocError {
     #[error("download error: {0}")]
     DownloadError(String),
 
+    #[error("error from adventofcode.com: {0}")]
+    ApiError(String),
+
     #[cfg(feature = "submit")]
     #[error("Error on sanitizing answer")]
     SanitizeHtml,

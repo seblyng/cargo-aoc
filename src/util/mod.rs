@@ -75,6 +75,13 @@ pub async fn get_day_title_and_answers(day: u32, year: u32) -> Result<AocInfo, A
     let url = format!("https://adventofcode.com/{}/day/{}", year, day);
 
     let res = AocRequest::new().get(&url).await?;
+    if !res.status().is_success() {
+        return Err(AocError::ApiError(format!(
+            "Could not get day info from {}: {}",
+            url,
+            res.status()
+        )));
+    }
 
     let text = res.text().await?;
 
