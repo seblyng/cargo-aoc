@@ -45,7 +45,7 @@ pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
     let args = get_running_args(matches).await?;
     let ext = args.common.file.extension().unwrap().to_str().unwrap();
     let Some(compiler) = REGISTER.by_extension(ext) else {
-        return Err(AocError::UnsupporedLanguage(ext.to_owned()));
+        return Err(AocError::UnsupportedLanguage(ext.to_owned()));
     };
 
     let reader = compiler.execute(args).stderr_to_stdout().reader()?;
