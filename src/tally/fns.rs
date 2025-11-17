@@ -53,7 +53,7 @@ pub async fn get_compiled_days(
         async move {
             let args = prepare_args(ctx, &d.folder, d.day).await;
             progress.inc(1);
-            args.map(|args| (d.day, args)).ok_or_else(|| d.day)
+            args.map(|args| (d.day, args)).ok_or(d.day)
         }
     }))
     .await;
@@ -164,11 +164,7 @@ pub fn convert_to_print_format(
     let mut vec = days
         .into_iter()
         .map(|res| Ok::<BuildRes, DayError>(res.into()))
-        .chain(
-            ctx.errors
-                .into_iter()
-                .map(|err| Err::<BuildRes, DayError>(err)),
-        )
+        .chain(ctx.errors.into_iter().map(Err::<BuildRes, DayError>))
         .collect::<Vec<Result<_, DayError>>>();
 
     vec.sort_unstable_by_key(|r| match r {

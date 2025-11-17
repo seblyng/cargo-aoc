@@ -2,7 +2,6 @@ use std::path::Path;
 
 use regex::Regex;
 use serde::Deserialize;
-use serde_regex;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct TaskConfig {
@@ -43,7 +42,7 @@ impl Config {
 
         for line in text.split('\n').filter(|line| !line.is_empty()) {
             if let Some(time) = &self.task_one.time
-                && let Some(ans) = parse(line, &time)
+                && let Some(ans) = parse(line, time)
                 && ans1.is_none()
             {
                 ans1 = Some(ans);

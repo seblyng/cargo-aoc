@@ -33,7 +33,7 @@ impl PipelineCtx {
             let set = discovered.iter().map(|d| d.day).collect::<HashSet<_>>();
 
             for day in days {
-                if !set.contains(&day) {
+                if !set.contains(day) {
                     errors.push(DayError {
                         day: *day,
                         info: infos[day].clone(),

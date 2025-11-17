@@ -49,8 +49,8 @@ pub fn get_possible_days(year: usize) -> Result<Vec<usize>, AocError> {
     }
 }
 
-pub fn get_aoc_configs<'a>(year: &Path, days: &[DiscoveredDay]) -> HashMap<usize, Config> {
-    days.into_iter()
+pub fn get_aoc_configs(year: &Path, days: &[DiscoveredDay]) -> HashMap<usize, Config> {
+    days.iter()
         .map(|d| {
             let config = get_parse_config(year, &d.folder);
             (d.day, config)
@@ -66,7 +66,7 @@ pub async fn get_aoc_infos(
     progress.set_message("fetching day info");
 
     let tasks = days
-        .into_iter()
+        .iter()
         .map(|d| {
             let progress = progress.clone();
             async move {
@@ -79,10 +79,10 @@ pub async fn get_aoc_infos(
         })
         .collect::<Vec<_>>();
 
-    Ok(join_all(tasks)
+    join_all(tasks)
         .await
         .into_iter()
-        .collect::<Result<HashMap<_, _>, _>>()?)
+        .collect::<Result<HashMap<_, _>, _>>()
 }
 
 pub fn get_number_of_runs(matches: &ArgMatches) -> Result<usize, AocError> {
@@ -105,10 +105,10 @@ pub async fn prepare_args(ctx: &PipelineCtx, day_path: &Path, day: usize) -> Opt
     let main = find_file(day_path, "main")?;
     let input_path = day_path.join("input");
 
-    if !input_path.exists() {
-        if let Err(_) = download_input_file(day as u32, ctx.year as i32, day_path).await {
-            return None;
-        }
+    if !input_path.exists()
+        && (download_input_file(day as u32, ctx.year as i32, day_path).await).is_err()
+    {
+        return None;
     }
 
     Some(RunningArgs {
