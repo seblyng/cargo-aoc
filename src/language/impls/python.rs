@@ -1,11 +1,17 @@
-use crate::language::{Language, RunningArgs, r#trait::Compile};
+use crate::language::{
+    Language, RunningArgs,
+    r#trait::{Compile, Ext},
+};
 use duct::cmd;
 pub struct Python;
 
-impl Language for Python {
+impl Ext for Python {
     fn extension(&self) -> &'static str {
         "py"
     }
+}
+
+impl Language for Python {
     fn execute(&self, args: RunningArgs) -> duct::Expression {
         let input = args.common.input_file.display().to_string();
 

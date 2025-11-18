@@ -1,11 +1,17 @@
-use crate::language::{Language, RunningArgs, r#trait::Compile};
+use crate::language::{
+    Language, RunningArgs,
+    r#trait::{Compile, Ext},
+};
 use duct::cmd;
 pub struct Rust;
 
-impl Language for Rust {
+impl Ext for Rust {
     fn extension(&self) -> &'static str {
         "rs"
     }
+}
+
+impl Language for Rust {
     fn execute(&self, args: RunningArgs) -> duct::Expression {
         let input = args.common.input_file.display().to_string();
 

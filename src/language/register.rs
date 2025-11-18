@@ -42,11 +42,23 @@ impl Register {
 
 pub static REGISTER: LazyLock<Register> = LazyLock::new(|| {
     let mut r = Register::new();
-    // Add impls here
-    r.register(Rust);
-    r.register(Python);
 
-    r.register_compiler(Rust);
+    let langs = include_str!("../../languages.toml");
+    let config: super::dynamic::Config = toml::from_str(langs).unwrap();
+
+    for runner in config.runners() {
+        r.register(runner);
+    }
+
+    for compiler in config.compilers() {
+        r.register_compiler(compiler);
+    }
+
+    // Add impls here
+    // r.register(Rust);
+    // r.register(Python);
+
+    // r.register_compiler(Rust);
     r.register_compiler(Python);
     r
 });

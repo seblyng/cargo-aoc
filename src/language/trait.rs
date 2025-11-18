@@ -1,11 +1,14 @@
 use std::path::PathBuf;
 
-pub trait Language {
-    fn extension(&self) -> &'static str;
+pub trait Ext {
+    fn extension(&self) -> &str;
+}
+
+pub trait Language: Ext {
     fn execute(&self, args: RunningArgs) -> duct::Expression;
 }
 
-pub trait Compile: Language {
+pub trait Compile: Ext {
     fn compile(&self, args: RunningArgs) -> std::io::Result<duct::Expression>;
 }
 
