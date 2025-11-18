@@ -11,7 +11,7 @@ use crate::{
         print_fns::print_table,
         util::{get_number_of_runs, get_possible_days, get_year_from_path},
     },
-    util::file::get_root_path,
+    util::{file::get_root_path, verify_token},
 };
 
 mod ctx;
@@ -21,6 +21,8 @@ mod types;
 mod util;
 
 pub async fn tally(matches: &ArgMatches) -> Result<(), AocError> {
+    verify_token().await?;
+
     let number_of_runs = get_number_of_runs(matches)?;
 
     let root = get_root_path()?;

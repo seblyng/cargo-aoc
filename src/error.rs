@@ -5,6 +5,9 @@ pub enum AocError {
     #[error("Could not find AOC_TOKEN to download input or submit")]
     TokenError(#[from] dotenv::Error),
 
+    #[error("Issue with the token: {0}")]
+    InvalidTokenError(String),
+
     #[error("reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),
 

@@ -1,4 +1,5 @@
 use clap::Arg;
+use reqwest::StatusCode;
 use std::path::PathBuf;
 
 use chrono::Datelike;
@@ -164,6 +165,27 @@ pub fn get_day_argument() -> Arg {
     }
 
     Arg::new("day").short('d').required(true)
+}
+
+pub async fn verify_token() -> Result<(), AocError> {
+    const URL: &str = "https://adventofcode.com/2015/day/1/input";
+    let token = dotenv::var("AOC_TOKEN")?;
+    let token = token.replace("session=", "");
+
+    let client = reqwest::Client::new();
+    let res = client
+        .get(URL)
+        .header("Cookie", &format!("session={}", token))
+        .send()
+        .await;
+
+    match res {
+        Ok(res) => match res.status() {
+            StatusCode::OK => Ok(()),
+            _ => Err(AocError::InvalidTokenError(res.status().to_string())),
+        },
+        Err(err) => Err(AocError::ApiError(err.to_string())),
+    }
 }
 
 #[cfg(test)]
