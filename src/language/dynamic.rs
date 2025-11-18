@@ -101,47 +101,7 @@ impl Ext for Toolchain<CompileState> {
 
 impl Language for Toolchain<RunState> {
     fn execute(&self, args: super::RunningArgs) -> duct::Expression {
-        let input = args.common.input_file.display().to_string();
-
-        let forwarded = args.arguments.join(" ");
-
-        let day = args
-            .common
-            .day_folder
-            .file_name()
-            .unwrap()
-            .to_str()
-            .unwrap();
-
-        let file = args
-            .common
-            .file
-            .strip_prefix(&args.common.root_folder)
-            .unwrap();
-
-        let file = file.display().to_string();
-
-        let run = self
-            .run
-            .replace("{DAY}", &day)
-            .replace("{day}", &day)
-            .replace("{FILE}", &file)
-            .replace("{file}", &file)
-            .replace("{ARGS}", &forwarded)
-            .replace("{args}", &forwarded)
-            .replace("{root}", &args.common.root_folder.display().to_string())
-            .replace("{root}", &args.common.root_folder.display().to_string());
-
-        let (program, _args) = run.split_once(" ").unwrap();
-        let mut _args = _args.split_whitespace().collect::<Vec<_>>();
-        _args.push(&input);
-        let mut cmd = cmd(program, _args);
-        if let Some(dir) = &self.dir {
-            let dir = dir.replace("{DAY}", &day).replace("{day}", &day);
-            cmd = cmd.dir(dir);
-        }
-
-        cmd
+        run_command(&self.run, self, &args, true)
     }
 }
 
@@ -153,33 +113,7 @@ fn run_command<T>(
 ) -> Expression {
     let input = args.common.input_file.display().to_string();
 
-    let forwarded = args.arguments.join(" ");
-
-    let day = args
-        .common
-        .day_folder
-        .file_name()
-        .unwrap()
-        .to_str()
-        .unwrap();
-
-    let file = args
-        .common
-        .file
-        .strip_prefix(&args.common.root_folder)
-        .unwrap();
-
-    let file = file.display().to_string();
-
-    let run = command
-        .replace("{DAY}", &day)
-        .replace("{day}", &day)
-        .replace("{FILE}", &file)
-        .replace("{file}", &file)
-        .replace("{ARGS}", &forwarded)
-        .replace("{args}", &forwarded)
-        .replace("{root}", &args.common.root_folder.display().to_string())
-        .replace("{root}", &args.common.root_folder.display().to_string());
+    let run = expand_templates(command, args);
 
     let (program, _args) = match run.split_once(" ") {
         Some((p, a)) => (p, a),
@@ -190,14 +124,11 @@ fn run_command<T>(
         _args.push(&input);
     }
 
-    dbg!(&program, &_args);
     let mut cmd = cmd(program, _args);
     if let Some(dir) = &t.dir {
-        let dir = dir.replace("{DAY}", &day).replace("{day}", &day);
-        dbg!(&dir);
+        let dir = expand_templates(dir, args);
         cmd = cmd.dir(dir);
     }
-    dbg!(&cmd);
 
     cmd
 }
@@ -205,7 +136,6 @@ fn run_command<T>(
 impl super::r#trait::Compile for Toolchain<CompileState> {
     fn compile(&self, args: super::RunningArgs) -> std::io::Result<duct::Expression> {
         let compile = self.compile.as_ref().unwrap();
-        println!("???");
         if let Some(build) = &compile.build {
             let expr = run_command(&build, self, &args, false);
             let out = expr
@@ -214,7 +144,6 @@ impl super::r#trait::Compile for Toolchain<CompileState> {
                 .unchecked()
                 .run()
                 .unwrap();
-            dbg!("outut = ", &out);
             if !out.status.success() {
                 let err = std::str::from_utf8(&out.stdout).unwrap();
                 let err_line = err.lines().find(|line| line.starts_with("error: "));
@@ -226,30 +155,52 @@ impl super::r#trait::Compile for Toolchain<CompileState> {
     }
 }
 
-fn template_replce(s: &str, args: &RunningArgs) -> String {
-    let rel = |p: &Path| {
-        p.strip_prefix(&args.common.root_folder)
-            .unwrap()
-            .file_name()
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_string()
-    };
+pub fn expand_templates(input: &str, args: &RunningArgs) -> String {
+    use regex::Regex;
+    let re = Regex::new(r"\{([^}]+)\}").unwrap();
+    let forwarded = args.arguments.join(" ");
 
-    let abs = |p: &Path| p.display().to_string();
+    re.replace_all(input, |caps: &regex::Captures| {
+        let raw = &caps[1];
 
-    let c = &args.common;
+        let mut parts = raw.splitn(2, ':');
+        let first = parts.next().unwrap();
+        let second = parts.next();
 
-    let mut ret = s.to_string();
-    for (template, replace) in [
-        ("day", abs(&c.day_folder)),
-        ("rel:day", rel(&c.day_folder)),
-        ("file", abs(&c.file)),
-        ("rel:file", abs(&c.file)),
-    ] {
-        c
-    }
+        let (prefix, key) = match second {
+            Some(key) => (first, key),
+            None => ("", first),
+        };
 
-    todo!()
+        let s = match key {
+            "day" => &args.common.day_folder,
+            "file" => &args.common.file,
+            "args" => return forwarded.clone(),
+            _ => panic!("Unsupported"),
+        };
+
+        match prefix {
+            "" => abs(&s),
+            "rel" => rel(&s, args),
+            "name" => name(s),
+            _ => panic!("Unsupported"),
+        }
+    })
+    .to_string()
+}
+
+fn abs(p: &Path) -> String {
+    p.display().to_string()
+}
+fn name(p: &Path) -> String {
+    p.file_name().unwrap().to_str().unwrap().to_string()
+}
+fn rel(p: &Path, args: &RunningArgs) -> String {
+    p.strip_prefix(&args.common.root_folder)
+        .unwrap()
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string()
 }

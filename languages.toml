@@ -4,5 +4,13 @@ run = "cargo run --color always {args}"
 dir = "{day}"
 [toolchain.rust.compile]
 build = "cargo build --release"
-execute = "target/release/{rel:day}"
+execute = "{day}/target/release/{name:day}"
+
+[toolchain.python]
+ext = "py"
+run = "python3 {file}"
+[toolchain.python.compile]
+execute = "python3 {file}"
+
+
 

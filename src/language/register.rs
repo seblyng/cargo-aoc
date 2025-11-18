@@ -54,11 +54,5 @@ pub static REGISTER: LazyLock<Register> = LazyLock::new(|| {
         r.register_compiler(compiler);
     }
 
-    // Add impls here
-    // r.register(Rust);
-    // r.register(Python);
-
-    // r.register_compiler(Rust);
-    r.register_compiler(Python);
     r
 });
