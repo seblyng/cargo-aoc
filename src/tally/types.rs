@@ -47,6 +47,7 @@ pub enum ErrorTypes {
     MissingExtension,
     GetAnswers,
     Unsupported(String),
+    DuctError(std::io::Error),
 }
 
 impl std::fmt::Display for ErrorTypes {
@@ -60,6 +61,7 @@ impl std::fmt::Display for ErrorTypes {
             Self::MissingImplementation => write!(f, "Missing implementation"),
             Self::GetAnswers => write!(f, "Error getting answers"),
             Self::Unsupported(ext) => write!(f, "Unsuppored lang: {}", ext),
+            Self::DuctError(err) => write!(f, "Command err: {}", err),
         }
     }
 }

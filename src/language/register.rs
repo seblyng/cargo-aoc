@@ -3,7 +3,6 @@ use std::sync::LazyLock;
 use crate::language::Compile;
 
 use super::Language;
-use super::impls::*;
 
 pub struct Register {
     langs: Vec<Box<dyn Language + Sync + Send>>,

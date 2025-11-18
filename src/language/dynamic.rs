@@ -79,14 +79,6 @@ struct RunState;
 #[derive(Debug)]
 struct CompileState;
 
-/*
-    Template options are:
-    file => the main file (relative to the root)
-    day => the (file)name of the day folder
-    root => year folder
-    args => forwarded arguments
-*/
-
 impl Ext for Toolchain<RunState> {
     fn extension(&self) -> &str {
         &self.ext
@@ -138,12 +130,7 @@ impl super::r#trait::Compile for Toolchain<CompileState> {
         let compile = self.compile.as_ref().unwrap();
         if let Some(build) = &compile.build {
             let expr = run_command(&build, self, &args, false);
-            let out = expr
-                .stderr_to_stdout()
-                .stdout_capture()
-                .unchecked()
-                .run()
-                .unwrap();
+            let out = expr.stderr_to_stdout().stdout_capture().unchecked().run()?;
             if !out.status.success() {
                 let err = std::str::from_utf8(&out.stdout).unwrap();
                 let err_line = err.lines().find(|line| line.starts_with("error: "));

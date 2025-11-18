@@ -162,7 +162,8 @@ pub fn run_day(
             .stderr_file(w)
             .stdout_file(stdoutw)
             .run()
-            .expect("duct panic");
+            .map_err(ErrorTypes::DuctError)?;
+
         if !out.status.success() {
             progress.finish();
             let mut vec = Vec::new();
