@@ -4,7 +4,7 @@ pub trait Ext {
     fn extension(&self) -> &str;
 }
 
-pub trait Language: Ext {
+pub trait Runner: Ext {
     fn execute(&self, args: RunningArgs) -> duct::Expression;
 }
 

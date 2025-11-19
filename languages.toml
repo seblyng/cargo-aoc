@@ -11,6 +11,3 @@ ext = "py"
 run = "python3 {file}"
 [toolchain.python.compile]
 execute = "python3 {file}"
-
-
-

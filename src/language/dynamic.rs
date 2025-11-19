@@ -3,7 +3,7 @@ use std::{collections::HashMap, marker::PhantomData, path::Path};
 use duct::{Expression, cmd};
 use serde::Deserialize;
 
-use crate::language::{Language, RunningArgs, r#trait::Ext};
+use crate::language::{Runner, RunningArgs, r#trait::Ext};
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -11,7 +11,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn runners(&self) -> Vec<impl Language + 'static> {
+    pub fn runners(&self) -> Vec<impl Runner + 'static> {
         let mut vec = Vec::new();
 
         for value in self.toolchain.values() {
@@ -91,7 +91,7 @@ impl Ext for Toolchain<CompileState> {
     }
 }
 
-impl Language for Toolchain<RunState> {
+impl Runner for Toolchain<RunState> {
     fn execute(&self, args: super::RunningArgs) -> duct::Expression {
         run_command(&self.run, self, &args, true)
     }

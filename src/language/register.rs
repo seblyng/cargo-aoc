@@ -2,10 +2,10 @@ use std::sync::LazyLock;
 
 use crate::language::Compile;
 
-use super::Language;
+use super::Runner;
 
 pub struct Register {
-    langs: Vec<Box<dyn Language + Sync + Send>>,
+    langs: Vec<Box<dyn Runner + Sync + Send>>,
     compilers: Vec<Box<dyn Compile + Sync + Send>>,
 }
 
@@ -16,13 +16,13 @@ impl Register {
             compilers: Vec::new(),
         }
     }
-    pub fn register<L: Language + Sync + Send + 'static>(&mut self, lang: L) {
+    pub fn register<L: Runner + Sync + Send + 'static>(&mut self, lang: L) {
         self.langs.push(Box::new(lang));
     }
     pub fn register_compiler<C: Compile + Sync + Send + 'static>(&mut self, c: C) {
         self.compilers.push(Box::new(c));
     }
-    pub fn by_extension<'a>(&'a self, ext: &str) -> Option<&'a (dyn Language + Sync + Send)> {
+    pub fn by_extension<'a>(&'a self, ext: &str) -> Option<&'a (dyn Runner + Sync + Send)> {
         self.langs
             .iter()
             .find(|c| c.extension() == ext)
