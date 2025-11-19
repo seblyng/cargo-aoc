@@ -13,7 +13,7 @@ use super::request::AocRequest;
 use crate::{error::AocError, task_config::Config};
 
 static PARSE_FILE: &str = ".parse.toml";
-static LANGUAGE_FILE: &str = ".parse.toml";
+static LANGUAGE_FILE: &str = ".languages.toml";
 use crate::language::{Common, RunningArgs};
 
 pub fn get_day_from_path() -> Result<Option<u32>, AocError> {
@@ -153,7 +153,7 @@ pub fn get_supported_languages(root: &Path) -> crate::language::Config {
 
     use crate::language::Config as C;
 
-    let s = include_str!("../../languages.toml");
+    let s = include_str!("../../.languages.toml");
     let default_config: C = toml::from_str(s).expect("Error in the default language config");
 
     let iter = std::iter::once(default_config).chain(

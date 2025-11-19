@@ -6,8 +6,3 @@ dir = "{day}"
 build = "cargo build --release"
 execute = "{day}/target/release/{name:day}"
 
-[toolchain.python]
-ext = "py"
-run = "python3 {file}"
-[toolchain.python.compile]
-execute = "python3 {file}"
