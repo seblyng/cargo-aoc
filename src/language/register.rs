@@ -1,6 +1,9 @@
 use std::sync::LazyLock;
 
-use crate::language::Compile;
+use crate::{
+    language::Compile,
+    util::{self, file::get_root_path},
+};
 
 use super::Runner;
 
@@ -16,6 +19,7 @@ impl Register {
             compilers: Vec::new(),
         }
     }
+
     pub fn register<L: Runner + Sync + Send + 'static>(&mut self, lang: L) {
         self.langs.push(Box::new(lang));
     }
@@ -42,15 +46,15 @@ impl Register {
 pub static REGISTER: LazyLock<Register> = LazyLock::new(|| {
     let mut r = Register::new();
 
-    let langs = include_str!("../../languages.toml");
-    let config: super::dynamic::Config = toml::from_str(langs).unwrap();
+    if let Ok(root) = get_root_path() {
+        let config = util::file::get_supported_languages(&root);
+        for runner in config.runners() {
+            r.register(runner);
+        }
 
-    for runner in config.runners() {
-        r.register(runner);
-    }
-
-    for compiler in config.compilers() {
-        r.register_compiler(compiler);
+        for compiler in config.compilers() {
+            r.register_compiler(compiler);
+        }
     }
 
     r

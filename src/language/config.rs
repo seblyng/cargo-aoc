@@ -15,6 +15,12 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn from_file(p: &Path) -> Result<Self, AocError> {
+        let s = std::fs::read_to_string(p)?;
+        let res = toml::from_str(&s)?;
+
+        Ok(res)
+    }
     pub fn runners(&self) -> Vec<impl Runner + 'static> {
         let mut vec = Vec::new();
 

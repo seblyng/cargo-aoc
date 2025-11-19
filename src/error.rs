@@ -58,6 +58,9 @@ pub enum AocError {
     #[error("Unsupported language with extension {0}")]
     UnsupportedLanguage(String),
 
-    #[error("Error when replacing template string")]
+    #[error("Error when replacing template string: {0}")]
     TemplateError(String),
+
+    #[error("Error when trying to deserialize string {0}")]
+    TomlDeserializeError(#[from] toml::de::Error),
 }
