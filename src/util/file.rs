@@ -149,7 +149,7 @@ pub fn get_supported_languages(root: &Path) -> crate::language::Config {
         .map(|path| path.join(".config").join("cargo-aoc").join(LANGUAGE_FILE))
         .filter(|path| path.exists());
 
-    let configs = [config_lang, root_lang.exists().then(|| root_lang)];
+    let configs = [config_lang, root_lang.exists().then_some(root_lang)];
 
     use crate::language::Config as C;
 
@@ -160,8 +160,7 @@ pub fn get_supported_languages(root: &Path) -> crate::language::Config {
         configs
             .into_iter()
             .flatten()
-            .map(|path| C::from_file(&path))
-            .flatten(),
+            .flat_map(|path| C::from_file(&path)),
     );
 
     let mut toolchains = HashMap::new();

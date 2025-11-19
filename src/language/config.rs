@@ -139,7 +139,7 @@ impl super::r#trait::Compile for Toolchain<CompileState> {
     fn compile(&self, args: super::RunningArgs) -> Result<duct::Expression, AocError> {
         let compile = self.compile.as_ref().unwrap();
         if let Some(build) = &compile.build {
-            let expr = run_command(&build, self, &args, false)?;
+            let expr = run_command(build, self, &args, false)?;
             let out = expr.stderr_to_stdout().stdout_capture().unchecked().run()?;
             if !out.status.success() {
                 let err = std::str::from_utf8(&out.stdout).unwrap();
@@ -194,14 +194,14 @@ pub fn expand_templates(input: &str, args: &RunningArgs) -> Result<String, AocEr
         };
 
         match prefix {
-            "" => Ok(abs(&s)),
-            "rel" => Ok(rel(&s, args)),
+            "" => Ok(abs(s)),
+            "rel" => Ok(rel(s, args)),
             "name" => Ok(name(s)),
             _ => Err(AocError::TemplateError(format!("prefix: {}", prefix))),
         }
     };
 
-    Ok(replace_all(&re, input, r#fn)?)
+    replace_all(&re, input, r#fn)
 }
 
 fn abs(p: &Path) -> String {
