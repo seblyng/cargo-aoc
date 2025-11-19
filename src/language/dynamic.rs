@@ -1,9 +1,13 @@
 use std::{collections::HashMap, marker::PhantomData, path::Path};
 
 use duct::{Expression, cmd};
+use regex::{Captures, Regex};
 use serde::Deserialize;
 
-use crate::language::{Runner, RunningArgs, r#trait::Ext};
+use crate::{
+    error::AocError,
+    language::{Runner, RunningArgs, r#trait::Ext},
+};
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -92,7 +96,7 @@ impl Ext for Toolchain<CompileState> {
 }
 
 impl Runner for Toolchain<RunState> {
-    fn execute(&self, args: super::RunningArgs) -> duct::Expression {
+    fn execute(&self, args: super::RunningArgs) -> Result<duct::Expression, AocError> {
         run_command(&self.run, self, &args, true)
     }
 }
@@ -102,10 +106,10 @@ fn run_command<T>(
     t: &Toolchain<T>,
     args: &RunningArgs,
     include_input: bool,
-) -> Expression {
+) -> Result<Expression, AocError> {
     let input = args.common.input_file.display().to_string();
 
-    let run = expand_templates(command, args);
+    let run = expand_templates(command, args)?;
 
     let (program, _args) = match run.split_once(" ") {
         Some((p, a)) => (p, a),
@@ -118,36 +122,53 @@ fn run_command<T>(
 
     let mut cmd = cmd(program, _args);
     if let Some(dir) = &t.dir {
-        let dir = expand_templates(dir, args);
+        let dir = expand_templates(dir, args)?;
         cmd = cmd.dir(dir);
     }
 
-    cmd
+    Ok(cmd)
 }
 
 impl super::r#trait::Compile for Toolchain<CompileState> {
-    fn compile(&self, args: super::RunningArgs) -> std::io::Result<duct::Expression> {
+    fn compile(&self, args: super::RunningArgs) -> Result<duct::Expression, AocError> {
         let compile = self.compile.as_ref().unwrap();
         if let Some(build) = &compile.build {
-            let expr = run_command(&build, self, &args, false);
+            let expr = run_command(&build, self, &args, false)?;
             let out = expr.stderr_to_stdout().stdout_capture().unchecked().run()?;
             if !out.status.success() {
                 let err = std::str::from_utf8(&out.stdout).unwrap();
                 let err_line = err.lines().find(|line| line.starts_with("error: "));
-                return Err(std::io::Error::other(err_line.unwrap_or(err)));
+                let io = std::io::Error::other(err_line.unwrap_or(err));
+                return Err(AocError::StdIoErr(io));
             }
         }
 
-        Ok(run_command(&compile.execute, self, &args, true))
+        run_command(&compile.execute, self, &args, true)
     }
 }
 
-pub fn expand_templates(input: &str, args: &RunningArgs) -> String {
-    use regex::Regex;
+fn replace_all<E>(
+    re: &Regex,
+    haystack: &str,
+    replacement: impl Fn(&Captures) -> Result<String, E>,
+) -> Result<String, E> {
+    let mut new = String::with_capacity(haystack.len());
+    let mut last_match = 0;
+    for caps in re.captures_iter(haystack) {
+        let m = caps.get(0).unwrap();
+        new.push_str(&haystack[last_match..m.start()]);
+        new.push_str(&replacement(&caps)?);
+        last_match = m.end();
+    }
+    new.push_str(&haystack[last_match..]);
+    Ok(new)
+}
+
+pub fn expand_templates(input: &str, args: &RunningArgs) -> Result<String, AocError> {
     let re = Regex::new(r"\{([^}]+)\}").unwrap();
     let forwarded = args.arguments.join(" ");
 
-    re.replace_all(input, |caps: &regex::Captures| {
+    let r#fn = |caps: &regex::Captures| {
         let raw = &caps[1];
 
         let mut parts = raw.splitn(2, ':');
@@ -162,18 +183,19 @@ pub fn expand_templates(input: &str, args: &RunningArgs) -> String {
         let s = match key {
             "day" => &args.common.day_folder,
             "file" => &args.common.file,
-            "args" => return forwarded.clone(),
+            "args" => return Ok(forwarded.clone()),
             _ => panic!("Unsupported"),
         };
 
         match prefix {
-            "" => abs(&s),
-            "rel" => rel(&s, args),
-            "name" => name(s),
-            _ => panic!("Unsupported"),
+            "" => Ok(abs(&s)),
+            "rel" => Ok(rel(&s, args)),
+            "name" => Ok(name(s)),
+            _ => Err(AocError::TemplateError(format!("prefix: {}", prefix))),
         }
-    })
-    .to_string()
+    };
+
+    Ok(replace_all(&re, input, r#fn)?)
 }
 
 fn abs(p: &Path) -> String {

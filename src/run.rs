@@ -48,7 +48,7 @@ pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
         return Err(AocError::UnsupportedLanguage(ext.to_owned()));
     };
 
-    let reader = compiler.execute(args).stderr_to_stdout().reader()?;
+    let reader = compiler.execute(args)?.stderr_to_stdout().reader()?;
 
     let reader = BufReader::new(reader);
     let mut lines = reader.lines();

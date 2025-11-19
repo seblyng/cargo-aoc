@@ -57,4 +57,7 @@ pub enum AocError {
 
     #[error("Unsupported language with extension {0}")]
     UnsupportedLanguage(String),
+
+    #[error("Error when replacing template string")]
+    TemplateError(String),
 }

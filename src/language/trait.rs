@@ -1,15 +1,17 @@
 use std::path::PathBuf;
 
+use crate::error::AocError;
+
 pub trait Ext {
     fn extension(&self) -> &str;
 }
 
 pub trait Runner: Ext {
-    fn execute(&self, args: RunningArgs) -> duct::Expression;
+    fn execute(&self, args: RunningArgs) -> Result<duct::Expression, AocError>;
 }
 
 pub trait Compile: Ext {
-    fn compile(&self, args: RunningArgs) -> std::io::Result<duct::Expression>;
+    fn compile(&self, args: RunningArgs) -> Result<duct::Expression, AocError>;
 }
 
 #[allow(dead_code)]
