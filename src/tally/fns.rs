@@ -69,7 +69,7 @@ pub async fn get_compiled_days(
         for res in prepared.into_iter() {
             match res {
                 Ok((day, args)) => {
-                    handles.push(scope.spawn(move || compile_day(day, args, &progress)));
+                    handles.push(scope.spawn(move || compile_day(day, args, progress)));
                 }
                 Err(day) => {
                     ctx.push_error(day, ErrorTypes::InputDownload);
