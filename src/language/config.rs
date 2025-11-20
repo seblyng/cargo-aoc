@@ -107,26 +107,11 @@ impl Runner for Toolchain<RunState> {
     }
 }
 
-#[allow(dead_code)]
-pub fn translate_unix_ops_to_windows(input: &str) -> String {
-    input.replace(";", " & ") // Windows CMD alternative to ';'
-}
-
 fn transform_command(s: &str) -> (String, Vec<String>) {
-    if cfg!(unix) {
-        ("sh".to_owned(), vec!["-c".to_string(), s.to_owned()])
-    } else if cfg!(windows) {
-        (
-            "powershell".to_owned(),
-            vec!["-c".to_string(), translate_unix_ops_to_windows(s)],
-        )
+    if cfg!(windows) {
+        ("cmd".to_owned(), vec!["/c".to_string(), s.to_owned()])
     } else {
-        let (program, args) = match s.split_once(" ") {
-            Some((p, a)) => (p, a),
-            _ => (s, ""),
-        };
-        let args = args.split_whitespace().map(|s| s.to_owned()).collect();
-        (program.to_owned(), args)
+        ("sh".to_owned(), vec!["-c".to_string(), s.to_owned()])
     }
 }
 
@@ -209,7 +194,7 @@ pub fn expand_templates(input: &str, args: &RunningArgs) -> Result<String, AocEr
             "day" => &args.common.day_folder,
             "file" => &args.common.file,
             "args" => return Ok(forwarded.clone()),
-            _ => panic!("Unsupported"),
+            _ => return Err(AocError::TemplateError(format!("template: {}", key))),
         };
 
         match prefix {
