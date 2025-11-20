@@ -124,7 +124,11 @@ pub async fn prepare_args(ctx: &PipelineCtx, day_path: &Path, day: usize) -> Opt
     })
 }
 
-pub fn compile_day(day: usize, args: RunningArgs) -> Result<CompiledDay, (usize, ErrorTypes)> {
+pub fn compile_day(
+    day: usize,
+    args: RunningArgs,
+    progress: &ProgressBar,
+) -> Result<CompiledDay, (usize, ErrorTypes)> {
     let Some(ext) = args
         .common
         .file
@@ -132,17 +136,21 @@ pub fn compile_day(day: usize, args: RunningArgs) -> Result<CompiledDay, (usize,
         .and_then(|e| e.to_str())
         .map(|s| s.to_string())
     else {
+        progress.inc(1);
         return Err((day, ErrorTypes::MissingExtension));
     };
 
     let Some(compiler) = REGISTER.compiler_by_extension(&ext) else {
+        progress.inc(1);
         return Err((day, ErrorTypes::Unsupported(ext)));
     };
 
-    match compiler.compile(args) {
+    let res = match compiler.compile(args) {
         Ok(expr) => Ok(CompiledDay { day, expr }),
         Err(err) => Err((day, ErrorTypes::Compiler(err.to_string()))),
-    }
+    };
+    progress.inc(1);
+    res
 }
 
 pub fn run_day(
@@ -165,7 +173,7 @@ pub fn run_day(
             .map_err(ErrorTypes::DuctError)?;
 
         if !out.status.success() {
-            progress.finish();
+            progress.finish_and_clear();
             let mut vec = Vec::new();
             r.read_to_end(&mut vec).expect("reading to vec");
             let text = std::str::from_utf8(&vec)

@@ -45,7 +45,7 @@ pub async fn get_compiled_days(
     discovered: Vec<DiscoveredDay>,
 ) -> Result<Vec<CompiledDay>, AocError> {
     let progress = get_progressbar(discovered.len() as u64);
-    progress.set_message("compiling");
+    progress.set_message("preparing");
 
     let prepared = futures::future::join_all(discovered.into_iter().map(|d| {
         let progress = progress.clone();
@@ -58,14 +58,18 @@ pub async fn get_compiled_days(
     }))
     .await;
 
+    progress.finish_and_clear();
+
+    let progress = get_progressbar(prepared.len() as u64);
+    progress.set_message("compiling");
     let mut results = Vec::new();
     std::thread::scope(|scope| {
         let mut handles = Vec::new();
-
+        let progress = &progress;
         for res in prepared.into_iter() {
             match res {
                 Ok((day, args)) => {
-                    handles.push(scope.spawn(move || compile_day(day, args)));
+                    handles.push(scope.spawn(move || compile_day(day, args, &progress)));
                 }
                 Err(day) => {
                     ctx.push_error(day, ErrorTypes::InputDownload);
