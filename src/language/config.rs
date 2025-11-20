@@ -107,6 +107,29 @@ impl Runner for Toolchain<RunState> {
     }
 }
 
+#[allow(dead_code)]
+pub fn translate_unix_ops_to_windows(input: &str) -> String {
+    input.replace(";", " & ") // Windows CMD alternative to ';'
+}
+
+fn transform_command(s: &str) -> (String, Vec<String>) {
+    if cfg!(unix) {
+        ("sh".to_owned(), vec!["-c".to_string(), s.to_owned()])
+    } else if cfg!(windows) {
+        (
+            "powershell".to_owned(),
+            vec!["-c".to_string(), translate_unix_ops_to_windows(s)],
+        )
+    } else {
+        let (program, args) = match s.split_once(" ") {
+            Some((p, a)) => (p, a),
+            _ => (s, ""),
+        };
+        let args = args.split_whitespace().map(|s| s.to_owned()).collect();
+        (program.to_owned(), args)
+    }
+}
+
 fn run_command<T>(
     command: &str,
     t: &Toolchain<T>,
@@ -117,16 +140,12 @@ fn run_command<T>(
 
     let run = expand_templates(command, args)?;
 
-    let (program, _args) = match run.split_once(" ") {
-        Some((p, a)) => (p, a),
-        _ => (run.as_str(), ""),
-    };
-    let mut _args = _args.split_whitespace().collect::<Vec<_>>();
+    let (program, mut vec) = transform_command(&run);
     if include_input {
-        _args.push(&input);
+        vec.push(input);
     }
 
-    let mut cmd = cmd(program, _args);
+    let mut cmd = cmd(program, vec);
     if let Some(dir) = &t.dir {
         let dir = expand_templates(dir, args)?;
         cmd = cmd.dir(dir);
