@@ -7,6 +7,7 @@ mod assert;
 mod bench;
 mod clippy;
 mod error;
+mod language;
 mod run;
 mod setup;
 #[cfg(feature = "tally")]

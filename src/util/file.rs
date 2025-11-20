@@ -1,16 +1,20 @@
 use std::{
+    collections::HashMap,
     env::home_dir,
     ffi::OsStr,
     path::{Path, PathBuf},
 };
 
 use chrono::Datelike;
+use clap::ArgMatches;
 use reqwest::StatusCode;
 
 use super::request::AocRequest;
 use crate::{error::AocError, task_config::Config};
 
 static PARSE_FILE: &str = ".parse.toml";
+static LANGUAGE_FILE: &str = ".languages.toml";
+use crate::language::{Common, RunningArgs};
 
 pub fn get_day_from_path() -> Result<Option<u32>, AocError> {
     let get_day = |s: &str| -> Option<u32> {
@@ -139,6 +143,38 @@ pub async fn download_input_file(day: u32, year: i32, dir: &Path) -> Result<(), 
     Ok(())
 }
 
+pub fn get_supported_languages(root: &Path) -> crate::language::Config {
+    let root_lang = root.join(LANGUAGE_FILE);
+    let config_lang = home_dir()
+        .map(|path| path.join(".config").join("cargo-aoc").join(LANGUAGE_FILE))
+        .filter(|path| path.exists());
+
+    let configs = [config_lang, root_lang.exists().then_some(root_lang)];
+
+    use crate::language::Config as C;
+
+    let s = include_str!("../../.languages.toml");
+    let default_config: C = toml::from_str(s).expect("Error in the default language config");
+
+    let iter = std::iter::once(default_config).chain(
+        configs
+            .into_iter()
+            .flatten()
+            .flat_map(|path| C::from_file(&path)),
+    );
+
+    let mut toolchains = HashMap::new();
+
+    for config in iter {
+        for (ext, toolchain) in config.toolchain {
+            toolchains.insert(ext, toolchain);
+        }
+    }
+    crate::language::Config {
+        toolchain: toolchains,
+    }
+}
+
 pub fn get_parse_config(root: &Path, day: &Path) -> Config {
     let f = || {
         if let Some(file) = find_file(day, PARSE_FILE) {
@@ -163,6 +199,45 @@ pub fn get_parse_config(root: &Path, day: &Path) -> Config {
 
     f().and_then(|path| Config::new(&path).ok())
         .unwrap_or_default()
+}
+
+pub fn get_input_file(matches: &ArgMatches) -> &str {
+    if matches.get_flag("test") {
+        "test"
+    } else {
+        "input"
+    }
+}
+
+pub async fn get_running_args(matches: &ArgMatches) -> Result<RunningArgs, AocError> {
+    let day = super::get_day(matches)?;
+    let root = get_root_path()?;
+    let day_path = day_path(&root, day).await?;
+
+    let main = find_file(&day_path, "main").unwrap();
+
+    let input_file = get_input_file(matches);
+
+    let mut input = day_path.clone();
+    input.push(input_file);
+
+    let trailing_args = matches
+        .get_many::<String>("args")
+        .unwrap_or_default()
+        .cloned()
+        .collect::<Vec<_>>();
+
+    Ok(RunningArgs {
+        arguments: trailing_args,
+        release: false,
+        common: Common {
+            file: main,
+            day: day as i32,
+            day_folder: day_path,
+            root_folder: root,
+            input_file: input,
+        },
+    })
 }
 
 pub fn find_file(start_dir: &Path, filename: &str) -> Option<PathBuf> {

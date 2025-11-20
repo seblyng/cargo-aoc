@@ -5,11 +5,17 @@ pub enum AocError {
     #[error("Could not find AOC_TOKEN to download input or submit")]
     TokenError(#[from] dotenv::Error),
 
+    #[error("Issue with the token: {0}")]
+    InvalidTokenError(String),
+
     #[error("reqwest error: {0}")]
     ReqwestError(#[from] reqwest::Error),
 
     #[error("download error: {0}")]
     DownloadError(String),
+
+    #[error("error from adventofcode.com: {0}")]
+    ApiError(String),
 
     #[cfg(feature = "submit")]
     #[error("Error on sanitizing answer")]
@@ -48,4 +54,13 @@ pub enum AocError {
 
     #[error("Setup for year already exists")]
     SetupExists,
+
+    #[error("Unsupported language with extension {0}")]
+    UnsupportedLanguage(String),
+
+    #[error("Error when replacing template string: {0}")]
+    TemplateError(String),
+
+    #[error("Error when trying to deserialize string {0}")]
+    TomlDeserializeError(#[from] toml::de::Error),
 }

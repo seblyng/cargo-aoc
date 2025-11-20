@@ -2,26 +2,18 @@ use std::io::{BufRead, BufReader};
 
 use chrono::prelude::*;
 use clap::ArgMatches;
-use duct::cmd;
 
 #[cfg(feature = "submit")]
 use crate::util::submit::{self, get_submit_task};
 use crate::{
     assert::assert_answer,
     error::AocError,
+    language::REGISTER,
     util::{
-        file::{day_path, download_input_file, get_parse_config, get_root_path},
+        file::{day_path, download_input_file, get_parse_config, get_root_path, get_running_args},
         get_day,
     },
 };
-
-fn get_input_file(matches: &ArgMatches) -> &str {
-    if matches.get_flag("test") {
-        "test"
-    } else {
-        "input"
-    }
-}
 
 pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
     let day = get_day(matches)?;
@@ -50,21 +42,13 @@ pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
         download_input_file(day, year, &dir).await?;
     }
 
-    let input = get_input_file(matches);
+    let args = get_running_args(matches).await?;
+    let ext = args.common.file.extension().unwrap().to_str().unwrap();
+    let Some(compiler) = REGISTER.by_extension(ext) else {
+        return Err(AocError::UnsupportedLanguage(ext.to_owned()));
+    };
 
-    let trailing_args = matches
-        .get_many::<&str>("args")
-        .unwrap_or_default()
-        .copied()
-        .collect::<Vec<_>>();
-
-    let args = std::iter::once("run")
-        .chain(trailing_args)
-        .chain(["--color", "always"])
-        .chain(std::iter::once(input));
-
-    let cmd = cmd("cargo", args);
-    let reader = cmd.dir(&dir).stderr_to_stdout().reader()?;
+    let reader = compiler.execute(args)?.stderr_to_stdout().reader()?;
 
     let reader = BufReader::new(reader);
     let mut lines = reader.lines();

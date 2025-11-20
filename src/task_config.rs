@@ -2,20 +2,17 @@ use std::path::Path;
 
 use regex::Regex;
 use serde::Deserialize;
-use serde_regex;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct TaskConfig {
     #[serde(with = "serde_regex")]
     pub answer: Regex,
 
-    // Will use this later
-    #[allow(dead_code)]
     #[serde(default, with = "serde_regex")]
     pub time: Option<Regex>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     pub task_one: TaskConfig,
     pub task_two: TaskConfig,
@@ -26,6 +23,37 @@ impl Config {
         let toml_str = std::fs::read_to_string(path)?;
         let config: Config = toml::from_str(&toml_str).map_err(std::io::Error::other)?;
         Ok(config)
+    }
+
+    pub fn get_times(&self, output: &str) -> (Option<usize>, Option<usize>) {
+        let strip = strip_ansi_escapes::strip(output);
+        let text = std::str::from_utf8(&strip).unwrap();
+
+        let parse = |line: &str, regex: &Regex| {
+            regex
+                .captures(line)
+                .iter()
+                .next()
+                .and_then(|cap| cap[1].parse::<usize>().ok())
+        };
+
+        let mut ans1: Option<usize> = None;
+        let mut ans2: Option<usize> = None;
+
+        for line in text.split('\n').filter(|line| !line.is_empty()) {
+            if let Some(time) = &self.task_one.time
+                && let Some(ans) = parse(line, time)
+                && ans1.is_none()
+            {
+                ans1 = Some(ans);
+            } else if let Some(time) = &self.task_two.time
+                && let Some(ans) = parse(line, time)
+                && ans2.is_none()
+            {
+                ans2 = Some(ans);
+            }
+        }
+        (ans1, ans2)
     }
 
     pub fn get_answers(&self, output: &str) -> (Option<String>, Option<String>) {

@@ -1,4 +1,5 @@
 use clap::Arg;
+use reqwest::StatusCode;
 use std::path::PathBuf;
 
 use chrono::Datelike;
@@ -15,9 +16,6 @@ pub mod file;
 pub mod request;
 #[cfg(feature = "submit")]
 pub mod submit;
-#[cfg(feature = "tally")]
-pub mod tally_util;
-
 #[derive(Eq, PartialEq, Clone, Copy)]
 pub enum Task {
     One,
@@ -57,11 +55,17 @@ pub fn get_time_symbol() -> String {
     if sym == "us" { "μs".to_owned() } else { sym }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct AocInfo {
     pub title: String,
     pub part1_answer: Option<String>,
     pub part2_answer: Option<String>,
+}
+
+impl AocInfo {
+    pub fn is_unimplemented(&self) -> bool {
+        self.part1_answer.is_none() && self.part2_answer.is_none()
+    }
 }
 
 pub async fn get_day_title_and_answers(day: u32, year: u32) -> Result<AocInfo, AocError> {
@@ -72,6 +76,13 @@ pub async fn get_day_title_and_answers(day: u32, year: u32) -> Result<AocInfo, A
     let url = format!("https://adventofcode.com/{}/day/{}", year, day);
 
     let res = AocRequest::new().get(&url).await?;
+    if !res.status().is_success() {
+        return Err(AocError::ApiError(format!(
+            "Could not get day info from {}: {}",
+            url,
+            res.status()
+        )));
+    }
 
     let text = res.text().await?;
 
@@ -154,6 +165,27 @@ pub fn get_day_argument() -> Arg {
     }
 
     Arg::new("day").short('d').required(true)
+}
+
+pub async fn verify_token() -> Result<(), AocError> {
+    const URL: &str = "https://adventofcode.com/2015/day/1/input";
+    let token = dotenv::var("AOC_TOKEN")?;
+    let token = token.replace("session=", "");
+
+    let client = reqwest::Client::new();
+    let res = client
+        .get(URL)
+        .header("Cookie", &format!("session={}", token))
+        .send()
+        .await;
+
+    match res {
+        Ok(res) => match res.status() {
+            StatusCode::OK => Ok(()),
+            _ => Err(AocError::InvalidTokenError(res.status().to_string())),
+        },
+        Err(err) => Err(AocError::ApiError(err.to_string())),
+    }
 }
 
 #[cfg(test)]
