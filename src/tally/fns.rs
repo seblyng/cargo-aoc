@@ -129,6 +129,7 @@ pub async fn get_run_result(
 
         for day in days {
             let pb = multi.add(get_progressbar(num_runs as u64));
+            pb.set_message(format!("Running day {}", day.day));
             let config = ctx.configs[&day.day].clone();
             handles.push(scope.spawn(move || {
                 run_day(num_runs, day.expr, &config, &pb)
