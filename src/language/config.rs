@@ -119,15 +119,16 @@ fn run_command<T>(
     command: &str,
     t: &Toolchain<T>,
     args: &RunningArgs,
-    include_input: bool,
+    include_args: bool,
 ) -> Result<Expression, AocError> {
     let input = args.common.input_file.display().to_string();
 
     let run = expand_templates(command, args)?;
 
     let (program, mut vec) = transform_command(&run);
-    if include_input {
+    if include_args {
         vec.push(input);
+        vec.extend(args.arguments.iter().cloned());
     }
 
     let mut cmd = cmd(program, vec);
