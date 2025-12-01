@@ -257,10 +257,10 @@ pub fn find_file(
         let correct_file_name = path
             .file_name()
             .is_some_and(|f| f.to_str().unwrap().starts_with(filename));
-        let allowed_ext = allowed_exts.as_ref().map_or(true, |exts| {
+        let allowed_ext = allowed_exts.as_ref().is_none_or(|exts| {
             path.extension()
                 .and_then(|ext| ext.to_str())
-                .map_or(true, |ext| exts.contains(&ext.to_string()))
+                .is_none_or(|ext| exts.contains(&ext.to_string()))
         });
 
         if path.is_file() && correct_file_name && allowed_ext {
