@@ -102,7 +102,7 @@ pub fn get_year_from_path(path: &Path) -> Result<usize, AocError> {
 }
 
 pub async fn prepare_args(ctx: &PipelineCtx, day_path: &Path, day: usize) -> Option<RunningArgs> {
-    let main = find_file(day_path, "main")?;
+    let main = find_file(day_path, "main", Some(&REGISTER.compiler_exts()))?;
     let input_path = day_path.join("input");
 
     if !input_path.exists()
