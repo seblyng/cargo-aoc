@@ -107,11 +107,23 @@ impl Runner for Toolchain<RunState> {
     }
 }
 
-fn transform_command(s: &str) -> (String, Vec<String>) {
+fn transform_command(
+    command: &str,
+    running_args: &RunningArgs,
+    include_args: bool,
+) -> (String, Vec<String>) {
+    let mut command = command.to_owned();
+
+    if include_args {
+        let input = running_args.common.input_file.display().to_string();
+        let rest = running_args.arguments.join(" ");
+
+        command.push_str(&format!(" {} {}", input, rest));
+    }
     if cfg!(windows) {
-        ("cmd".to_owned(), vec!["/c".to_string(), s.to_owned()])
+        ("cmd".to_owned(), vec!["/c".to_string(), command])
     } else {
-        ("sh".to_owned(), vec!["-c".to_string(), s.to_owned()])
+        ("sh".to_owned(), vec!["-c".to_string(), command])
     }
 }
 
@@ -121,15 +133,9 @@ fn run_command<T>(
     args: &RunningArgs,
     include_args: bool,
 ) -> Result<Expression, AocError> {
-    let input = args.common.input_file.display().to_string();
-
     let run = expand_templates(command, args)?;
 
-    let (program, mut vec) = transform_command(&run);
-    if include_args {
-        vec.push(input);
-        vec.extend(args.arguments.iter().cloned());
-    }
+    let (program, vec) = transform_command(&run, args, include_args);
 
     let mut cmd = cmd(program, vec);
     if let Some(dir) = &t.dir {
