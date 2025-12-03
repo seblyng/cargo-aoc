@@ -20,6 +20,20 @@ impl Register {
         }
     }
 
+    pub fn runner_exts(&self) -> Vec<String> {
+        self.langs
+            .iter()
+            .map(|l| l.extension().to_string())
+            .collect()
+    }
+
+    pub fn compiler_exts(&self) -> Vec<String> {
+        self.compilers
+            .iter()
+            .map(|l| l.extension().to_string())
+            .collect()
+    }
+
     pub fn register<L: Runner + Sync + Send + 'static>(&mut self, lang: L) {
         self.langs.push(Box::new(lang));
     }

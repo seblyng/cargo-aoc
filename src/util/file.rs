@@ -10,7 +10,7 @@ use clap::ArgMatches;
 use reqwest::StatusCode;
 
 use super::request::AocRequest;
-use crate::{error::AocError, task_config::Config};
+use crate::{error::AocError, language::REGISTER, task_config::Config};
 
 static PARSE_FILE: &str = ".parse.toml";
 static LANGUAGE_FILE: &str = ".languages.toml";
@@ -177,7 +177,7 @@ pub fn get_supported_languages(root: &Path) -> crate::language::Config {
 
 pub fn get_parse_config(root: &Path, day: &Path) -> Config {
     let f = || {
-        if let Some(file) = find_file(day, PARSE_FILE) {
+        if let Some(file) = find_file(day, PARSE_FILE, None) {
             return Some(file);
         }
 
@@ -214,7 +214,7 @@ pub async fn get_running_args(matches: &ArgMatches) -> Result<RunningArgs, AocEr
     let root = get_root_path()?;
     let day_path = day_path(&root, day).await?;
 
-    let main = find_file(&day_path, "main").unwrap();
+    let main = find_file(&day_path, "main", Some(&REGISTER.runner_exts())).unwrap();
 
     let input_file = get_input_file(matches);
 
@@ -240,7 +240,11 @@ pub async fn get_running_args(matches: &ArgMatches) -> Result<RunningArgs, AocEr
     })
 }
 
-pub fn find_file(start_dir: &Path, filename: &str) -> Option<PathBuf> {
+pub fn find_file(
+    start_dir: &Path,
+    filename: &str,
+    allowed_exts: Option<&[String]>,
+) -> Option<PathBuf> {
     let entries = match std::fs::read_dir(start_dir) {
         Ok(entries) => entries,
         Err(_) => return None,
@@ -250,11 +254,16 @@ pub fn find_file(start_dir: &Path, filename: &str) -> Option<PathBuf> {
 
     for entry in entries.flatten() {
         let path = entry.path();
-        if path.is_file()
-            && path
-                .file_name()
-                .is_some_and(|f| f.to_str().unwrap().starts_with(filename))
-        {
+        let correct_file_name = path
+            .file_name()
+            .is_some_and(|f| f.to_str().unwrap().starts_with(filename));
+        let allowed_ext = allowed_exts.as_ref().is_none_or(|exts| {
+            path.extension()
+                .and_then(|ext| ext.to_str())
+                .is_none_or(|ext| exts.contains(&ext.to_string()))
+        });
+
+        if path.is_file() && correct_file_name && allowed_ext {
             return Some(path);
         } else if path.is_dir() {
             subdirs.push(path);
@@ -272,7 +281,7 @@ pub fn find_file(start_dir: &Path, filename: &str) -> Option<PathBuf> {
     });
 
     for subdir in subdirs {
-        if let Some(found) = find_file(&subdir, filename) {
+        if let Some(found) = find_file(&subdir, filename, allowed_exts) {
             return Some(found);
         }
     }
