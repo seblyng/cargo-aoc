@@ -32,7 +32,7 @@ pub fn get_progressbar(len: u64) -> ProgressBar {
 
 pub fn get_possible_days(year: usize) -> Result<Vec<usize>, AocError> {
     let now = chrono::Utc::now();
-    const LAST_DAY_2025: usize = 13;
+    const LAST_DAY_2025: usize = 12;
 
     if (2015..=2024).contains(&year) {
         return Ok((1..=25).collect());
