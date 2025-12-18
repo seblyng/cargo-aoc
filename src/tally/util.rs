@@ -39,10 +39,11 @@ pub fn get_possible_days(year: usize) -> Result<Vec<usize>, AocError> {
     }
 
     if year as i32 == now.year() {
-        if now.month() < 12 {
-            Err(AocError::InvalidMonth)
+        if now.month() == 12 {
+            let day = now.day() as usize;
+            Ok((1..=day.min(LAST_DAY_2025)).collect())
         } else {
-            Ok((1..=now.day() as usize).collect())
+            Err(AocError::InvalidMonth)
         }
     } else {
         Ok((1..=LAST_DAY_2025).collect())
