@@ -1,7 +1,6 @@
 [toolchain.rust]
 ext = "rs"
 run = "cargo run --color always {args}"
-dir = "{day}"
 compile = {
     build = "cargo build --release",
     execute = "{day}/target/release/{name:day}"
