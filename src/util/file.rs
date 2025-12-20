@@ -7,6 +7,7 @@ use std::{
 
 use chrono::Datelike;
 use clap::ArgMatches;
+use regex::Regex;
 use reqwest::StatusCode;
 
 use super::request::AocRequest;
@@ -51,19 +52,35 @@ pub fn get_day_from_path() -> Result<Option<u32>, AocError> {
     }
 }
 
+pub fn get_year_from_path(year: &Path) -> Result<i32, AocError> {
+    let regex = Regex::new("(\\d{4})").unwrap();
+    let name = year.file_name().ok_or_else(std::io::Error::last_os_error)?;
+    let s = name.to_str().unwrap();
+    let Some(captures) = regex.captures(s) else {
+        return Err(AocError::InvalidYear);
+    };
+
+    let year = captures[1].parse().unwrap();
+    Ok(year)
+}
+
 pub fn get_root_path() -> Result<std::path::PathBuf, AocError> {
     let mut cwd = std::env::current_dir()?;
 
+    let regex = Regex::new("(\\d{4})").unwrap();
     loop {
         let name = cwd.file_name().ok_or_else(std::io::Error::last_os_error)?;
+        let s = name.to_str().unwrap();
 
-        let Ok(year): Result<i32, _> = name.to_str().unwrap().parse() else {
+        let Some(captures) = regex.captures(s) else {
             if !cwd.pop() {
                 return Err(AocError::InvalidYear);
             }
             continue;
         };
 
+        // Beucase of the regex, this has to be a number
+        let year = captures[1].parse::<i32>().unwrap();
         let current_year = chrono::Utc::now().year();
 
         if (2015..=current_year).contains(&year) {
@@ -92,12 +109,15 @@ pub fn get_folder_year() -> Result<i32, AocError> {
 
 pub async fn day_path<P: AsRef<Path>>(root: P, day: u32) -> Result<std::path::PathBuf, AocError> {
     use std::{collections::VecDeque, io::*};
-    let dir_name = format!("day_{:02}", day);
-    let dir_name = OsStr::new(&dir_name);
     let ignore = [OsStr::new("target"), OsStr::new(".git")];
 
     let mut vec = VecDeque::new();
     vec.push_back(root.as_ref().as_os_str().to_os_string());
+
+    // Regex for checking for the day, allowing leading zero, disallowing being
+    // part of a larger number, i.e, 1 should not be mistaken as 11
+    let regex = format!(r"(?:^|[^0-9])0*{}(?:$|[^0-9])", day);
+    let regex = Regex::new(&regex).unwrap();
 
     while let Some(path) = vec.pop_front() {
         let mut stream = tokio::fs::read_dir(&path).await?;
@@ -107,9 +127,9 @@ pub async fn day_path<P: AsRef<Path>>(root: P, day: u32) -> Result<std::path::Pa
                 continue;
             }
 
-            if file_name == dir_name {
-                let mut buff: PathBuf = path.into();
-                buff.push(dir_name);
+            let s = file_name.to_str().unwrap();
+            if regex.is_match(s) {
+                let buff: PathBuf = entry.path();
                 return Ok(buff);
             }
 

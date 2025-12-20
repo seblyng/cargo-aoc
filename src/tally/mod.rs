@@ -9,9 +9,12 @@ use crate::{
             get_verified_days,
         },
         print_fns::print_table,
-        util::{get_number_of_runs, get_possible_days, get_year_from_path},
+        util::{get_number_of_runs, get_possible_days},
     },
-    util::{file::get_root_path, verify_token},
+    util::{
+        file::{get_root_path, get_year_from_path},
+        verify_token,
+    },
 };
 
 mod ctx;
@@ -26,7 +29,7 @@ pub async fn tally(matches: &ArgMatches) -> Result<(), AocError> {
     let number_of_runs = get_number_of_runs(matches)?;
 
     let root = get_root_path()?;
-    let year = get_year_from_path(&root)?;
+    let year = get_year_from_path(&root)? as usize;
     let days = get_possible_days(year)?;
 
     let mut ctx = PipelineCtx::new(year, root.clone(), &days).await?;
