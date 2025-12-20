@@ -93,15 +93,6 @@ pub fn get_number_of_runs(matches: &ArgMatches) -> Result<usize, AocError> {
         .parse()?)
 }
 
-pub fn get_year_from_path(path: &Path) -> Result<usize, AocError> {
-    Ok(path
-        .file_name()
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .parse::<usize>()?)
-}
-
 pub async fn prepare_args(ctx: &PipelineCtx, day_path: &Path, day: usize) -> Option<RunningArgs> {
     let main = find_file(day_path, "main", Some(&REGISTER.compiler_exts()))?;
     let input_path = day_path.join("input");

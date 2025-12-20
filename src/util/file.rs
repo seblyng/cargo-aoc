@@ -52,19 +52,35 @@ pub fn get_day_from_path() -> Result<Option<u32>, AocError> {
     }
 }
 
+pub fn get_year_from_path(year: &Path) -> Result<i32, AocError> {
+    let regex = Regex::new("(\\d{4})").unwrap();
+    let name = year.file_name().ok_or_else(std::io::Error::last_os_error)?;
+    let s = name.to_str().unwrap();
+    let Some(captures) = regex.captures(s) else {
+        return Err(AocError::InvalidYear);
+    };
+
+    let year = captures[1].parse().unwrap();
+    Ok(year)
+}
+
 pub fn get_root_path() -> Result<std::path::PathBuf, AocError> {
     let mut cwd = std::env::current_dir()?;
 
+    let regex = Regex::new("(\\d{4})").unwrap();
     loop {
         let name = cwd.file_name().ok_or_else(std::io::Error::last_os_error)?;
+        let s = name.to_str().unwrap();
 
-        let Ok(year): Result<i32, _> = name.to_str().unwrap().parse() else {
+        let Some(captures) = regex.captures(s) else {
             if !cwd.pop() {
                 return Err(AocError::InvalidYear);
             }
             continue;
         };
 
+        // Beucase of the regex, this has to be a number
+        let year = captures[1].parse::<i32>().unwrap();
         let current_year = chrono::Utc::now().year();
 
         if (2015..=current_year).contains(&year) {

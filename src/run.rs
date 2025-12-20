@@ -10,7 +10,10 @@ use crate::{
     error::AocError,
     language::REGISTER,
     util::{
-        file::{day_path, download_input_file, get_parse_config, get_root_path, get_running_args},
+        file::{
+            day_path, download_input_file, get_parse_config, get_root_path, get_running_args,
+            get_year_from_path,
+        },
         get_day,
     },
 };
@@ -18,13 +21,7 @@ use crate::{
 pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
     let day = get_day(matches)?;
     let path = get_root_path()?;
-    let year = path
-        .file_name()
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .parse::<i32>()
-        .unwrap();
+    let year = get_year_from_path(&path)?;
 
     let dir = day_path(&path, day).await?;
 
