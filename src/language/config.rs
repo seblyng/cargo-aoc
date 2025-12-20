@@ -107,6 +107,10 @@ impl Runner for Toolchain<RunState> {
     }
 }
 
+fn shell_quote(s: &str) -> String {
+    format!("'{}'", s)
+}
+
 fn transform_command(
     command: &str,
     running_args: &RunningArgs,
@@ -118,7 +122,7 @@ fn transform_command(
         let input = running_args.common.input_file.display().to_string();
         let rest = running_args.arguments.join(" ");
 
-        command.push_str(&format!(" {} {}", input, rest));
+        command.push_str(&format!(" {} {}", shell_quote(&input), rest));
     }
     if cfg!(windows) {
         ("cmd".to_owned(), vec!["/c".to_string(), command])
