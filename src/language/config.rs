@@ -145,6 +145,8 @@ fn run_command<T>(
     if let Some(dir) = &t.dir {
         let dir = expand_templates(dir, args)?;
         cmd = cmd.dir(dir);
+    } else {
+        cmd = cmd.dir(&args.common.day_folder);
     }
 
     Ok(cmd)
