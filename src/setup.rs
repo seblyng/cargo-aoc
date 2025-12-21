@@ -9,13 +9,19 @@ async fn setup_template_project(year: i32) -> Result<PathBuf, AocError> {
         return Err(AocError::SetupExists);
     }
 
+    let num_days = if (2015..=2024).contains(&year) {
+        25
+    } else {
+        12
+    };
+
     let year = format!("{}", year);
     let path = Path::new(&year);
     tokio::fs::create_dir(&path).await?;
 
     let template_dir = format!("{}/template", env!("CARGO_MANIFEST_DIR"));
 
-    for day in 1..=25 {
+    for day in 1..=num_days {
         let day = format!("day_{:0>2}", day);
         tokio::process::Command::new("cargo")
             .args(["new", &day])
