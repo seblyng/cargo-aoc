@@ -205,7 +205,19 @@ pub fn expand_templates(input: &str, args: &RunningArgs) -> Result<String, AocEr
 
         let s = match key {
             "day" => &args.common.day_folder,
-            "file" => &args.common.file,
+            "file" => {
+                if let Some(runner) = &args.runner
+                    && let Some(file) = args.common.files.get(runner)
+                {
+                    file
+                } else if args.common.files.len() == 1 {
+                    args.common.files.values().next().unwrap()
+                } else {
+                    return Err(AocError::UnsupportedLanguage(
+                        "Too many languages to pick from, and no runner present".to_string(),
+                    ));
+                }
+            }
             "args" => return Ok(forwarded.clone()),
             _ => return Err(AocError::TemplateError(format!("template: {}", key))),
         };

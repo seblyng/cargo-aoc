@@ -79,6 +79,10 @@ async fn main() -> Result<(), AocError> {
                         .trailing_var_arg(true)
                         .allow_hyphen_values(true)
                         .help("Arguments after -- will passed to cargo"),
+                    Arg::new("runner")
+                        .long("runner")
+                        .required(false)
+                        .help("The runner to pick from, if multiple main files exist"),
                 ])
                 .about("Runs the given day"),
         )

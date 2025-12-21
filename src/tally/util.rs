@@ -10,7 +10,7 @@ use crate::{
     task_config::Config,
     util::{
         AocInfo,
-        file::{download_input_file, find_file, get_parse_config},
+        file::{download_input_file, find_file_by_ext, get_parse_config},
         get_day_title_and_answers, get_time_symbol,
     },
 };
@@ -94,7 +94,6 @@ pub fn get_number_of_runs(matches: &ArgMatches) -> Result<usize, AocError> {
 }
 
 pub async fn prepare_args(ctx: &PipelineCtx, day_path: &Path, day: usize) -> Option<RunningArgs> {
-    let main = find_file(day_path, "main", Some(&REGISTER.compiler_exts()))?;
     let input_path = day_path.join("input");
 
     if !input_path.exists()
@@ -103,14 +102,22 @@ pub async fn prepare_args(ctx: &PipelineCtx, day_path: &Path, day: usize) -> Opt
         return None;
     }
 
+    let mut map = HashMap::new();
+    for ext in REGISTER.compiler_exts() {
+        if let Some(path) = find_file_by_ext(&day_path, &ext) {
+            map.insert(ext, path);
+        }
+    }
+
     Some(RunningArgs {
         release: true,
         arguments: vec![],
+        runner: None,
         common: Common {
             day_folder: day_path.to_path_buf(),
             input_file: input_path,
             day: day as i32,
-            file: main,
+            files: map,
             root_folder: ctx.root.to_path_buf(),
         },
     })
@@ -121,16 +128,13 @@ pub fn compile_day(
     args: RunningArgs,
     progress: &ProgressBar,
 ) -> Result<CompiledDay, (usize, ErrorTypes)> {
-    let Some(ext) = args
-        .common
-        .file
-        .extension()
-        .and_then(|e| e.to_str())
-        .map(|s| s.to_string())
-    else {
+    // For tally, only one file is supported :shrug:
+    if args.common.files.len() != 1 {
         progress.inc(1);
         return Err((day, ErrorTypes::MissingExtension));
-    };
+    }
+
+    let ext = args.common.files.keys().next().unwrap().to_owned();
 
     let Some(compiler) = REGISTER.compiler_by_extension(&ext) else {
         progress.inc(1);
