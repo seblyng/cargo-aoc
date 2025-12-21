@@ -1,0 +1,3 @@
+[toolchain.python]
+ext = "py"
+run = "python3 {file}"

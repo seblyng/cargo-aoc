@@ -212,6 +212,10 @@ pub fn expand_templates(input: &str, args: &RunningArgs) -> Result<String, AocEr
                     file
                 } else if args.common.files.len() == 1 {
                     args.common.files.values().next().unwrap()
+                } else if args.common.files.len() == 0 {
+                    return Err(AocError::TemplateError(
+                        "Tried to template in file, but could not find any".to_string(),
+                    ));
                 } else {
                     return Err(AocError::UnsupportedLanguage(
                         "Too many languages to pick from, and no runner present".to_string(),

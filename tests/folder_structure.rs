@@ -10,7 +10,7 @@ use std::{
 };
 
 fn create_main_file(day_root: &Path, name: &str) {
-    let template_code = "./tests/files/template.rs";
+    let template_code = "./tests/files/main.rs";
     let day = day_root.join(name);
     std::fs::File::create(&day).unwrap();
     std::fs::copy(template_code, day).unwrap();
@@ -111,5 +111,11 @@ fn day_with_space_and_postfix() {
 #[test]
 fn day_with_postfix() {
     let (_dir, root) = create_folder("2025", &["day_01_sol"]);
+    check_ok(&root);
+}
+
+#[test]
+fn main_file_with_different_name() {
+    let (_dir, root) = create_folder_custom("2025", &["day_01_sol"], "not_main.rs", "input");
     check_ok(&root);
 }
