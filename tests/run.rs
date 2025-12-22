@@ -90,3 +90,48 @@ fn test_ok_multiple_files_with_flag() {
         .stdout(contains("1"))
         .stdout(contains("2"));
 }
+
+#[test]
+fn test_run_all_days() {
+    let days = &[
+        "day_01_sol",
+        "day2",
+        "day-3",
+        "day - 04",
+        "day_5",
+        "day 6",
+        "day 07",
+        "day -- 8",
+        "day -- 09",
+        "day10",
+        "day - 11",
+        "day 12",
+        "day_13",
+        "day#14",
+        "15",
+        "d16",
+        "_17",
+        "day 18",
+        "day_19",
+        "day - 20",
+        "day--21",
+        "ay-22",
+        "d23",
+        "day_24",
+        "day -25",
+    ];
+
+    let (_dir, root) = common::create_folder_custom("2025", days, &[("main.rs", "main.rs")]);
+
+    for (i, day) in (1..=25).zip(days) {
+        Command::new(cargo_bin!())
+            .current_dir(&root)
+            .arg("run")
+            .arg("-d")
+            .env("DAY", "TRUE")
+            .arg(i.to_string())
+            .assert()
+            .stdout(contains(format!("1-{}", day)))
+            .stdout(contains(format!("2-{}", day)));
+    }
+}

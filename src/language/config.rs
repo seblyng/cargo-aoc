@@ -226,12 +226,15 @@ pub fn expand_templates(input: &str, args: &RunningArgs) -> Result<String, AocEr
             _ => return Err(AocError::TemplateError(format!("template: {}", key))),
         };
 
-        match prefix {
+        let ans = match prefix {
             "" => Ok(abs(s)),
             "rel" => Ok(rel(s, args)),
+            "stem" => Ok(stem(s)),
             "name" => Ok(name(s)),
             _ => Err(AocError::TemplateError(format!("prefix: {}", prefix))),
-        }
+        };
+
+        ans.map(|s| shell_quote(&s))
     };
 
     replace_all(&re, input, r#fn)
@@ -251,4 +254,7 @@ fn rel(p: &Path, args: &RunningArgs) -> String {
         .to_str()
         .unwrap()
         .to_string()
+}
+fn stem(p: &Path) -> String {
+    p.file_stem().unwrap().to_str().unwrap().to_string()
 }
