@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::error::AocError;
@@ -17,7 +18,7 @@ pub trait Compile: Ext {
 #[allow(dead_code)]
 #[derive(Default, Debug)]
 pub struct Common {
-    pub file: PathBuf,
+    pub files: HashMap<String, PathBuf>,
     pub day_folder: PathBuf,
     pub day: i32,
     pub root_folder: PathBuf,
@@ -30,4 +31,5 @@ pub struct RunningArgs {
     pub arguments: Vec<String>,
     pub release: bool,
     pub common: Common,
+    pub runner: Option<String>,
 }

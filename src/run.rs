@@ -40,9 +40,27 @@ pub async fn run(matches: &ArgMatches) -> Result<(), AocError> {
     }
 
     let args = get_running_args(matches).await?;
-    let ext = args.common.file.extension().unwrap().to_str().unwrap();
-    let Some(compiler) = REGISTER.by_extension(ext) else {
-        return Err(AocError::UnsupportedLanguage(ext.to_owned()));
+
+    let ext = if args.common.files.len() == 1 {
+        let v: String = args.common.files.keys().next().unwrap().to_owned();
+        Some(v)
+    } else if let Some(runner) = &args.runner
+        && REGISTER.by_extension(runner).is_some()
+    {
+        Some(runner.to_owned())
+    } else {
+        None
+    };
+
+    let Some(ext) = ext else {
+        let vals = args.common.files.keys().collect::<Vec<_>>();
+        return Err(AocError::UnsupportedLanguage(format!(
+            "Too many to pick from: {:?}",
+            vals
+        )));
+    };
+    let Some(compiler) = REGISTER.by_extension(&ext) else {
+        return Err(AocError::UnsupportedLanguage(ext));
     };
 
     let reader = compiler.execute(args)?.stderr_to_stdout().reader()?;
