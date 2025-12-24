@@ -1,3 +1,5 @@
+use table_generator::{Column, Table};
+
 use crate::{
     tally::{
         types::{DayError, RunDayResult},
@@ -48,128 +50,59 @@ impl From<RunDayResult> for BuildRes {
     }
 }
 
+fn create_rows(day: &BuildRes) -> (Vec<String>, Vec<String>) {
+    let ans1 = day.info.ans1.clone().unwrap_or("NA".to_string());
+    let time1 = day.time.0.map(format_duration).unwrap_or("NA".to_string());
+    let part1_symbol = if day.info.correct1 {
+        "✅".into()
+    } else {
+        "❌".into()
+    };
+
+    let ans2 = day.info.ans2.clone().unwrap_or("NA".to_string());
+    let time2 = day.time.1.map(format_duration).unwrap_or("NA".to_string());
+    let part2_symbol = if day.info.correct2 {
+        "✅".into()
+    } else {
+        "❌".into()
+    };
+    (
+        vec![ans1, time1, part1_symbol],
+        vec![ans2, time2, part2_symbol],
+    )
+}
+
 pub fn print_table(days: Vec<Result<BuildRes, DayError>>, year: usize) {
-    let max_name_len = days
-        .iter()
-        .map(|res| match res {
-            Ok(br) => br.info.title.len(),
-            Err(err) => err.info.title.len(),
-        })
-        .max()
-        .unwrap_or(5);
-    let max_part1_len = days
-        .iter()
-        .flatten()
-        .map(|br| br.info.ans1.as_ref().unwrap_or(&"NA".to_string()).len())
-        .max()
-        .unwrap_or(5);
-    let max_part2_len = days
-        .iter()
-        .flatten()
-        .map(|br| br.info.ans2.as_ref().unwrap_or(&"NA".to_string()).len())
-        .max()
-        .unwrap_or(5);
+    let mut table = Table::new(format!("Advent of Code {year}"));
 
-    let max_part1_time_len = days
-        .iter()
-        .flatten()
-        .map(|br| {
-            br.time
-                .0
-                .map(format_duration)
-                .unwrap_or("NA".to_string())
-                .len()
-        })
-        .max()
-        .unwrap_or(5);
-    let max_part2_time_len = days
-        .iter()
-        .flatten()
-        .map(|br| {
-            br.time
-                .1
-                .map(format_duration)
-                .unwrap_or("NA".to_string())
-                .len()
-        })
-        .max()
-        .unwrap_or(5);
+    let mut day_col = Column::new("Day");
+    let mut part1_col = Column::new("Part 1");
+    let mut part2_col = Column::new("Part 2");
 
-    let day_header_len = max_name_len + 5;
-    let part1_header_len = max_part1_len + 8 + max_part1_time_len;
-    let part2_header_len = max_part2_len + 8 + max_part2_time_len;
-
-    let max_total_len = day_header_len + part1_header_len + part2_header_len + 5;
-    let title_length = max_total_len - 2;
-
-    println!("╔{}╗", "═".repeat(max_total_len + 3));
-    println!(
-        "║ {:^title_length$}  ║",
-        format!("🦀 Advent of Code {year} 🦀")
-    );
-    println!(
-        "╠{}╦{}╦{}╣",
-        "═".repeat(day_header_len + 2),
-        "═".repeat(part1_header_len + 2),
-        "═".repeat(part2_header_len + 2),
-    );
-    println!(
-        "║ {:day_header_len$} ║ {:part1_header_len$} ║ {:part2_header_len$} ║",
-        "Day", "Part 1", "Part 2"
-    );
-    println!(
-        "╠{}╦{}╬{}╦{}╦{}╬{}╦{}╦{}╣",
-        "═".repeat(4),
-        "═".repeat(max_name_len + 2),
-        "═".repeat(max_part1_len + 2),
-        "═".repeat(max_part1_time_len + 2),
-        "═".repeat(4),
-        "═".repeat(max_part2_len + 2),
-        "═".repeat(max_part2_time_len + 2),
-        "═".repeat(4),
-    );
-
-    for day in days {
+    for (i, day) in days.into_iter().enumerate() {
         match day {
             Ok(day) => {
-                let part1_symbol = if day.info.correct1 { "✅" } else { "❌" };
-                let part2_symbol = if day.info.correct2 { "✅" } else { "❌" };
-
-                println!(
-                    "║ {:>2} ║ {:max_name_len$} ║ {:max_part1_len$} ║ {:max_part1_time_len$} ║ {} ║ \
-                     {:max_part2_len$} ║ {:max_part2_time_len$} ║ {} ║ ",
-                    day.day,
-                    day.info.title,
-                    day.info.ans1.unwrap_or("NA".to_string()),
-                    day.time.0.map(format_duration).unwrap_or("NA".to_string()),
-                    part1_symbol,
-                    day.info.ans2.unwrap_or("NA".to_string()),
-                    day.time.1.map(format_duration).unwrap_or("NA".to_string()),
-                    part2_symbol,
-                );
+                day_col.add_row(vec![day.day.to_string(), day.info.title.clone()]);
+                let (p1, p2) = create_rows(&day);
+                part1_col.add_row(p1);
+                part2_col.add_row(p2);
             }
             Err(e) => {
-                let available_space = max_total_len - day_header_len - 2;
-                let mut s = e.error.to_string().replace('\n', " ");
-                s.truncate(available_space);
-                println!(
-                    "║ {:>2} ║ {:max_name_len$} ║ {:available_space$} ║",
-                    e.day, e.info.title, s
-                );
+                day_col.add_row(vec![e.day.to_string(), e.info.title.clone()]);
+                let text = e.error.to_string().replace('\n', " ");
+                table.add_span(i, 1..=2, text);
+
+                // Need to add a dummy column. the span will override it.
+                part1_col.add_row(vec!["", "", ""]);
+                part2_col.add_row(vec!["", "", ""]);
             }
         }
     }
-    println!(
-        "╚{}╩{}╩{}╩{}╩{}╩{}╩{}╩{}╝",
-        "═".repeat(4),
-        "═".repeat(max_name_len + 2),
-        "═".repeat(max_part1_len + 2),
-        "═".repeat(max_part1_time_len + 2),
-        "═".repeat(4),
-        "═".repeat(max_part2_len + 2),
-        "═".repeat(max_part2_time_len + 2),
-        "═".repeat(4),
-    );
+
+    table.add_column(day_col);
+    table.add_column(part1_col);
+    table.add_column(part2_col);
+    println!("{}", table);
 }
 
 // TODO: Fix this. Maybe it does not need to be a part of the first iteration
