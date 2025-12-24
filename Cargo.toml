@@ -23,7 +23,7 @@ regex = "1.12.2"
 serde_regex = "1.1.0"
 toml = "0.9.10"
 futures = "0.3.31"
-
+table-generator = { git = "https://github.com/sivertjoe/table-generator" }
 
 [features]
 default = ["bench", "tally", "submit"]
