@@ -1,0 +1,7 @@
+[toolchain.python]
+ext = "py"
+run = "python3 {file}"
+
+[toolchain.rust]
+ext = "rs"
+run = "rustc {file} && ./{stem:file}"

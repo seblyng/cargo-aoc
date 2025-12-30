@@ -205,17 +205,36 @@ pub fn expand_templates(input: &str, args: &RunningArgs) -> Result<String, AocEr
 
         let s = match key {
             "day" => &args.common.day_folder,
-            "file" => &args.common.file,
+            "file" => {
+                if let Some(runner) = &args.runner
+                    && let Some(file) = args.common.files.get(runner)
+                {
+                    file
+                } else if args.common.files.len() == 1 {
+                    args.common.files.values().next().unwrap()
+                } else if args.common.files.len() == 0 {
+                    return Err(AocError::TemplateError(
+                        "Tried to template in file, but could not find any".to_string(),
+                    ));
+                } else {
+                    return Err(AocError::UnsupportedLanguage(
+                        "Too many languages to pick from, and no runner present".to_string(),
+                    ));
+                }
+            }
             "args" => return Ok(forwarded.clone()),
             _ => return Err(AocError::TemplateError(format!("template: {}", key))),
         };
 
-        match prefix {
+        let ans = match prefix {
             "" => Ok(abs(s)),
             "rel" => Ok(rel(s, args)),
+            "stem" => Ok(stem(s)),
             "name" => Ok(name(s)),
             _ => Err(AocError::TemplateError(format!("prefix: {}", prefix))),
-        }
+        };
+
+        ans.map(|s| shell_quote(&s))
     };
 
     replace_all(&re, input, r#fn)
@@ -235,4 +254,7 @@ fn rel(p: &Path, args: &RunningArgs) -> String {
         .to_str()
         .unwrap()
         .to_string()
+}
+fn stem(p: &Path) -> String {
+    p.file_stem().unwrap().to_str().unwrap().to_string()
 }

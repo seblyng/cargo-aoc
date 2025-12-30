@@ -234,7 +234,12 @@ pub async fn get_running_args(matches: &ArgMatches) -> Result<RunningArgs, AocEr
     let root = get_root_path()?;
     let day_path = day_path(&root, day).await?;
 
-    let main = find_file(&day_path, "main", Some(&REGISTER.runner_exts())).unwrap();
+    let mut map = HashMap::new();
+    for ext in REGISTER.runner_exts() {
+        if let Some(path) = find_file_by_ext(&day_path, &ext) {
+            map.insert(ext, path);
+        }
+    }
 
     let input_file = get_input_file(matches);
 
@@ -247,11 +252,14 @@ pub async fn get_running_args(matches: &ArgMatches) -> Result<RunningArgs, AocEr
         .cloned()
         .collect::<Vec<_>>();
 
+    let runner = matches.get_one::<String>("runner").map(String::to_owned);
+
     Ok(RunningArgs {
         arguments: trailing_args,
         release: false,
+        runner,
         common: Common {
-            file: main,
+            files: map,
             day: day as i32,
             day_folder: day_path,
             root_folder: root,
@@ -259,6 +267,51 @@ pub async fn get_running_args(matches: &ArgMatches) -> Result<RunningArgs, AocEr
         },
     })
 }
+
+pub fn find_file_by_ext(start_dir: &Path, ext: &str) -> Option<PathBuf> {
+    let entries = match std::fs::read_dir(start_dir) {
+        Ok(entries) => entries,
+        Err(_) => return None,
+    };
+
+    let mut subdirs = Vec::new();
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let allowed_ext = path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .is_some_and(|fext| fext == ext);
+
+        if path.is_file() && allowed_ext {
+            return Some(path);
+        } else if path.is_dir() {
+            subdirs.push(path);
+        }
+    }
+
+    subdirs.sort_by(|a, b| {
+        let count_a = std::fs::read_dir(a)
+            .map(|r| r.count())
+            .unwrap_or(usize::MAX);
+        let count_b = std::fs::read_dir(b)
+            .map(|r| r.count())
+            .unwrap_or(usize::MAX);
+        count_a.cmp(&count_b)
+    });
+
+    for subdir in subdirs {
+        if let Some(found) = find_file_by_ext(&subdir, ext) {
+            return Some(found);
+        }
+    }
+
+    None
+}
+
+// pub fn multiple_runners() -> bool {
+//
+// }
 
 pub fn find_file(
     start_dir: &Path,
